@@ -1,0 +1,113 @@
+/*
+FILE : sample_ledtimer.c
+Objective :
+    The following program illustrates a simple timer using LEDs.
+    The the first 4 LEDs (connected to pins 13,12,11,10) glow sequentially with 100ms delay between each of them.
+    The next 4 LEDs represents the count of the number of cycles of the sequential LEDs. This resets when the count reaches the maximum
+    The push button connected to pin 5 resets all the leds to low state
+
+Circuit : sample_ledtimer.png
+
+        To simulate the circuit with the C version of the program the following link can be used:
+          https://www.tinkercad.com/things/6b4d6nVq37r
+
+Circuit Details :
+    Components used:
+        1 Arduino (DFRduino R3 used in circuit but works with other standard Arduinos as well)
+        2 LEDs
+        1 220 ohm resistor
+        1 push button
+        connecting wires
+    Circuit connections:
+        The connections are available in sample_ledtimer.png
+        4 LEDs are connected to PINs 13,12,11 and 10 representing the sequential timer
+        4 LEDs are connected to PINs 6,7,8 and 9 representing the binary equivalent of the counter
+        1 push button is connected to PIN 5 to reset the circuit
+
+Author:
+    Name: M Naveen Kumar
+    Github: mnaveenkumar2009
+*/
+#include "arduino/arduino.ceu"
+input int PIN_05;
+output bool PIN_13;
+output bool PIN_12;
+output bool PIN_11;
+output bool PIN_10;
+output bool PIN_09;
+output bool PIN_08;
+output bool PIN_07;
+output bool PIN_06;
+
+var[4] bool state=[false,false,false,false];//state represents the state of the output of pins 6,7,8,9
+var int i=0;
+
+loop do
+  if _digitalRead(5)==1 then
+      //resetting all the outputs to LOW
+      i=0;
+      var int j;
+      loop j in [0->3] do
+        state[j]=false;
+      end
+      emit PIN_13(off);
+      emit PIN_12(off);
+      emit PIN_11(off);
+      emit PIN_10(off);
+      emit PIN_06(off);
+      emit PIN_07(off);
+      emit PIN_08(off);
+      emit PIN_09(off);
+  end
+  //delay in the led blinking is 100 milliseconds
+  await 100ms;
+  if i%5==4 then
+    var int j;
+    var int stateval=0;//stateval is the decimal equivalent of the binary number formed by the boolean values of the state vectors
+    loop j in [0->3] do
+      if state[j] then
+        stateval=stateval+(1<<j);
+      end
+    end
+    if stateval==15 then
+      //resetting the counter to 0 as it reached the maximum value
+      loop j in [0->3] do
+        state[j]=false;
+      end
+      emit PIN_06(state[0]);
+      emit PIN_07(state[1]);
+      emit PIN_08(state[2]);
+      emit PIN_09(state[3]);
+    else
+      // emitting the binary representation of the counter in the LEDs
+      stateval=(stateval+1)%16;
+      loop j in [0->3] do
+        state[j]=stateval%2==1;
+        stateval=stateval/2;
+      end
+      emit PIN_06(state[0]);
+      emit PIN_07(state[1]);
+      emit PIN_08(state[2]);
+      emit PIN_09(state[3]);
+    end
+  end
+
+  //emitting on to the sequential LEDs
+  emit PIN_13(off);
+  emit PIN_12(off);
+  emit PIN_11(off);
+  emit PIN_10(off);
+  if i%5==0 then
+    emit PIN_13(on);
+  end
+  if i%5==1 then
+    emit PIN_12(on);
+  end
+  if i%5==2 then
+    emit PIN_11(on);
+  end
+  if i%5==3 then
+    emit PIN_10(on);
+  end
+  i=i+1;
+end
