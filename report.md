@@ -1,4 +1,14 @@
 -------------------------------------------------------------------------------
+`[14-May] -> [20-May]`
+-------------------------------------------------------------------------------
+
+### `[14-May]` What will I do this week?
+
+- 
+
+### `[21-May]` What did I do last week?
+
+-------------------------------------------------------------------------------
 `[07-May] -> [13-May]`
 -------------------------------------------------------------------------------
 
@@ -8,6 +18,11 @@
 - Read about I2C and ATmega datasheets and find the differences
 
 ### `[14-May]` What did I do last week?
+
+- Read about I2C
+- Went through ATmega datasheets for uno and mega and noted the differences
+- Tried out example of I2C without the standard API
+- Created an example that uses the standard API available in C for I2C for the same circuit
 
 -------------------------------------------------------------------------------
 `[30-Apr] -> [06-May]`
