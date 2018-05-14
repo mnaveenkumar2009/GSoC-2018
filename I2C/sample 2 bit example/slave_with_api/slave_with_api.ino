@@ -22,6 +22,7 @@ void setup() {
   Serial.begin(9600);
   Wire.begin(SLA);
   Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
 }
 
 void loop() {
@@ -33,8 +34,16 @@ void loop() {
 
 void receiveEvent(int bytes){
   int x = Wire.read();    // receive byte as an integer
-  Serial.println(x); 
+  //Serial.println(x); 
   digitalWrite(led1, x & 1);
   digitalWrite(led2, (x >> 1) & 1);
   //Wire.endTransmission();
+}
+
+void requestEvent() {
+  sendData = 0;
+  if (!digitalRead(button1)) sendData |= 1;
+  if (!digitalRead(button2)) sendData |= 1<<1;
+  //Serial.println("kjb");
+  Wire.write(sendData);
 }

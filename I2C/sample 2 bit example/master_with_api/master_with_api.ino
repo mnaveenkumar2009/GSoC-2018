@@ -22,21 +22,24 @@ void setup() {
 
   Wire.begin();//since it is master, address is optional
   Serial.begin(9600);//start serial o/p
+  
 }
 
 // the loop routine runs over and over again forever:
 void loop() {
+  Wire.requestFrom(SLA, 1);    // request 1 byte from slave device
+
+  while (Wire.available()) { // slave may send less than requested
+    int x = Wire.read(); // receive a byte 
+    digitalWrite(led1, x & 1);
+    digitalWrite(led2, (x >> 1) & 1);
+  }
+  
   sendData=0;
   if (!digitalRead(button1)) sendData |= 1;
   if (!digitalRead(button2)) sendData |= 1<<1;
 
   Wire.beginTransmission(SLA);
   Wire.write(sendData);
-  Serial.print(sendData);
   Wire.endTransmission();
-  Serial.print(sendData);
-  delay(300);
-  Serial.print(sendData);
-  // digitalWrite(led1, getData & 1);
-  // digitalWrite(led2, (getData >> 1) & 1);
 }
