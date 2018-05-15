@@ -25,12 +25,20 @@ void setup() {
   
 }
 
-// the loop routine runs over and over again forever:
+int old_time=millis();
+int new_time=old_time;
+bool state =0;
 void loop() {
-  digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);               // wait for a second
-  digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);               // wait for a second
+  new_time=millis();
+  //Serial.println(old_time);
+  //Serial.println(new_time);
+  //Serial.println("b");
+  if(new_time-old_time>=1000){
+    old_time=new_time;
+    state=!state;    
+    digitalWrite(led, state);
+    Serial.println(new_time);
+  }
   
   Wire.requestFrom(SLA, 1);    // request 1 byte from slave device
 
