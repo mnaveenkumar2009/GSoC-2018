@@ -4,7 +4,8 @@
 
 ### `[14-May]` What will I do this week?
 
-- 
+- send data by I2C using Wire.h library and Wire.available() in loop
+- convert the above code to céu
 
 ### `[21-May]` What did I do last week?
 
