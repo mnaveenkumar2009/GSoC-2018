@@ -26,7 +26,7 @@ loop do
     emit PIN_13(state);
   with
     
-    emit I2C_REQUEST_RECEIVE(sla, &&getData, 1);
+    emit I2C_REQUEST_RECEIVE(sla, &&getData[0], 1);
     var bool status1;
     var u8 n;
     (n,status1) = await I2C_REQUEST_DONE;
@@ -42,7 +42,7 @@ loop do
     
     sendData[0]=b1+(b2<<1);
     
-    emit I2C_REQUEST_SEND(sla,&&sendData,1);
+    emit I2C_REQUEST_SEND(sla,&&sendData[0],1);
     
     var u8 n;
     var bool status2;
