@@ -1,0 +1,52 @@
+output bool PIN_13;
+output bool PIN_12;
+output bool PIN_11;
+output bool PIN_10;//error led
+output bool PIN_9;//error led
+input int PIN_6;
+input int PIN_7;
+
+input  (u8,bool) I2C_REQUEST_DONE;
+output (u8,byte&&,u8) I2C_REQUEST_SEND;
+output (u8,byte&&,u8) I2C_REQUEST_RECEIVE;
+
+var u8 sla =0x80;	// slave address
+
+var[1] byte getData;
+var[1] byte sendData;
+
+output on/off I2C;
+emit I2C(on);
+
+var bool state =false;
+loop do
+  par/and do
+    await 1s;
+    state = not state;
+    emit PIN_13(state);
+  with
+    
+    emit I2C_REQUEST_RECEIVE(sla, &&getData, 1);
+    var bool status1;
+    var u8 n;
+    (n,status1) = await I2C_REQUEST_DONE;
+    if (status1) then
+      emit PIN_12((getData[0] & 1) as bool);
+      emit PIN_11(((getData[0] >> 1) & 1) as bool);
+    else
+      emit PIN_9(on);
+    end
+
+    var int b1 = await PIN_6;
+    var int b2 = await PIN_7;
+    
+    sendData[0]=b1+(b2<<1);
+    
+    emit I2C_REQUEST_SEND(sla,&&sendData,1);
+    
+    var u8 n;
+    var bool status2;
+    (n,status2) = await I2C_REQUEST_DONE;
+    emit PIN_10(not status2);
+  end
+end
