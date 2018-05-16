@@ -19,13 +19,14 @@ output on/off I2C;
 emit I2C(on);
 
 var bool state =false;
-loop do
-  par/and do
+par/and do
+  loop do
     await 1s;
     state = not state;
     emit PIN_13(state);
-  with
-    
+  end
+with
+  loop do  
     emit I2C_REQUEST_RECEIVE(sla, &&getData[0], 1);
     var bool status1;
     var u8 n;
