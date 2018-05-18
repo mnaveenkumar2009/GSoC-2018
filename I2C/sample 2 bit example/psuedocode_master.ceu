@@ -29,8 +29,8 @@ var u8 sla =0x80;	// slave address
 var[1] byte getData;
 var[1] byte sendData;
 
-var bool state =false;
 par/and do
+  var bool state =false;
   loop do
     await 1s;
     state = not state;
@@ -42,7 +42,7 @@ with
     var int status1;
     var u8 n;
     (n,status1) = await I2C_REQUEST_DONE;
-    if (status1!=0) then
+    if (status1==0) then
       emit PIN_12((getData[0] & 1) as bool);
       emit PIN_11(((getData[0] >> 1) & 1) as bool);
       emit PIN_9(off);
