@@ -10,7 +10,7 @@ In case of error in transmission of data:
 These errors could be caused by receiving a NACK or insufficient Buffer Size or any other TWI error
 */
 
-#include "i2c.ceu"
+#include "arduino/isr/avr/i2c.ceu"
 output bool PIN_13;
 output bool PIN_12;
 output bool PIN_11;
@@ -22,6 +22,7 @@ input int PIN_7;
 output on/off I2C;
 emit I2C(on);
 
+/*
 input  (u8,int) I2C_REQUEST_DONE;
 output (u8,byte&&,u8) I2C_REQUEST_SEND;
 output (u8,byte&&,u8) I2C_REQUEST_RECEIVE;
@@ -75,3 +76,4 @@ with
     end
   end
 end
+*/
