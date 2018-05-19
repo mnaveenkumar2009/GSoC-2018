@@ -1,15 +1,24 @@
-output on/off I2C;
+#ifndef CEU_I2C
+#define CEU_I2C
+    #include "arduino/arduino.ceu"
 
-var u8 rxBufferIndex=0;
+    output on/off I2C;
 
+    var u8 rxBufferIndex=0;
+    output (on/off v) I2C do
+        if v then
+            outer.rxBufferIndex = 0;
+            //rxBufferLength = 0;
 
+            //txBufferIndex = 0;
+            //txBufferLength = 0;
 
-output (on/off v) I2C do
-    if v then
-        rxBufferIndex = 0;
-        rxBufferLength = 0;
+            //twi_init();
+            _printf(",jb%d\n",chjk);
+            var int c=0;
+        else
 
-        txBufferIndex = 0;
-        txBufferLength = 0;
-
-        twi_init();
+        end
+    end
+    emit I2C(on);
+#endif

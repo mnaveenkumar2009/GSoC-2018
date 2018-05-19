@@ -9,6 +9,8 @@ In case of error in transmission of data:
   - master receiving error lights up the LED connected to pin 9
 These errors could be caused by receiving a NACK or insufficient Buffer Size or any other TWI error
 */
+
+#include "i2c.ceu"
 output bool PIN_13;
 output bool PIN_12;
 output bool PIN_11;
@@ -63,12 +65,13 @@ with
     var u8 n;
     var int status2;
     (n,status2) = await I2C_REQUEST_DONE;
-    if(status2!=0)
+    if(status2!=0) then
       emit PIN_10(on);
       //_Serial.println("the following error id occured");
       //_Serial.println(status2);
       //_Serial.println(n);
     else
       emit PIN_10(off);
+    end
   end
 end
