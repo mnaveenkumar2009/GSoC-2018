@@ -213,6 +213,39 @@
             
         return length;
         }
+
+
+        void twi_reply(uint8_t ack)
+        {
+        // transmit master read ready signal, with or without ack
+        if(ack){
+            TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
+        }else{
+            TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
+        }
+        }
+
+        void twi_stop(void)
+        {
+        // send stop condition
+        TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWEA) | _BV(TWINT) | _BV(TWSTO);
+
+        // wait for stop condition to be exectued on bus
+        // TWINT is not set after a stop condition!
+        while(TWCR & _BV(TWSTO)){
+            continue;
+        }
+        twi_state = TWI_READY;
+        }
+
+        void twi_releaseBus(void)
+        {
+        // release bus
+        TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWEA) | _BV(TWINT);
+
+        // update twi state
+        twi_state = TWI_READY;
+        }
     end
     native
         _twi_init,
@@ -307,19 +340,18 @@
         var int i;
         i=0;
         loop do
-            if (outer.rxBufferLength - outer.rxBufferIndex) <= 0 then
+            if outer.rxBufferLength - outer.rxBufferIndex <= 0 then
                 break;
             end
-
+            
             var int value = -1;
-            // get each successive byte on each call
             if outer.rxBufferIndex < outer.rxBufferLength then
                 value = outer.rxBuffer[outer.rxBufferIndex] as int;
                 outer.rxBufferIndex=outer.rxBufferIndex+1;
             end
 
             //buffer[i] = value;
-            //*buffer = value as byte;
+            *buffer = value as byte;
             i=i+1;
         end
     end
