@@ -1,13 +1,29 @@
 -------------------------------------------------------------------------------
+`[21-May] -> [27-May]`
+-------------------------------------------------------------------------------
+
+### `[21-May]` What will I do this week?
+
+- Test the I2C code written in céu and fix errors
+- Work on the API for I2C for both slave and master
+
+### `[28-May]` What did I do last week?
+
+-
+-------------------------------------------------------------------------------
 `[14-May] -> [20-May]`
 -------------------------------------------------------------------------------
 
 ### `[14-May]` What will I do this week?
 
-- send data by I2C using Wire.h library and Wire.available() in loop
-- convert the above code to céu
+- Send data by I2C using Wire.h library and Wire.available() in loop
+- Convert the above code to céu
 
 ### `[21-May]` What did I do last week?
+
+- Made examples that uses the Wire.h library for master and slave
+- Converted the above code to céu
+- Made progress in making the I2C API in céu
 
 -------------------------------------------------------------------------------
 `[07-May] -> [13-May]`

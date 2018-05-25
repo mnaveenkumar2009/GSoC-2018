@@ -1,3 +1,21 @@
+/*
+The Below API is an implementation of the TWI or Two Wire Interface.
+
+
+In TWI the serial data transmission is done in asynchronous mode.
+This protocol uses only two wires for communicating between two or more ICs.
+The two bidirectional open drain lines named SDA (Serial Data) and SCL (Serial Clock) with pull up resistors are used for data transfer between devices.
+
+The current API is as follows:
+
+output on/off I2C;// emit I2C to start or stop
+output (u8,byte&&,u8) I2C_REQUEST_SEND;// emit request to send 
+output (u8,byte&&,u8) I2C_REQUEST_RECEIVE;// emit request to receive
+input (u8,u8) I2C_REQUEST_DONE;// await the status of the 
+
+
+Example : samples/    // to be filled later
+*/
 #ifndef CEU_I2C
 #define CEU_I2C
     //////////////////////TWI
