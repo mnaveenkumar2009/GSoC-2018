@@ -11,7 +11,7 @@ The current API is as follows:
 output on/off I2C;// emit I2C to start or stop
 output (u8,byte&&,u8) I2C_REQUEST_SEND;// emit request to send 
 output (u8,byte&&,u8) I2C_REQUEST_RECEIVE;// emit request to receive
-input (u8,u8) I2C_REQUEST_DONE;// await the status of the 
+input (u8,u8) I2C_REQUEST_DONE;// await the status of the request
 
 
 Example : samples/    // to be filled later
@@ -104,68 +104,73 @@ Example : samples/    // to be filled later
 
         uint8_t twi_writeTo(uint8_t address, uint8_t* data, uint8_t length, uint8_t wait, uint8_t sendStop)
         {
-        uint8_t i;
+            
+            uint8_t i;
 
-        // ensure data will fit into buffer
-        if(TWI_BUFFER_LENGTH < length){
-            return 1;
-        }
+            // ensure data will fit into buffer
+            if(TWI_BUFFER_LENGTH < length){
+                return 1;
+            }
 
-        // wait until twi is ready, become master transmitter
-        while(TWI_READY != twi_state){
-            continue;
-        }
-        twi_state = TWI_MTX;
-        twi_sendStop = sendStop;
-        // reset error state (0xFF.. no error occured)
-        twi_error = 0xFF;
+            // wait until twi is ready, become master transmitter
+            while(TWI_READY != twi_state){
+                continue;
+            }
+            
+            twi_state = TWI_MTX;
+            twi_sendStop = sendStop;
+            // reset error state (0xFF.. no error occured)
+            twi_error = 0xFF;
 
-        // initialize buffer iteration vars
-        twi_masterBufferIndex = 0;
-        twi_masterBufferLength = length;
+            // initialize buffer iteration vars
+            twi_masterBufferIndex = 0;
+            twi_masterBufferLength = length;
         
-        // copy data to twi buffer
-        for(i = 0; i < length; ++i){
-            twi_masterBuffer[i] = data[i];
-        }
+            // copy data to twi buffer
+            for(i = 0; i < length; ++i){
+                twi_masterBuffer[i] = data[i];
+            }
+            
+            // build sla+w, slave device address + w bit
+            twi_slarw = TW_WRITE;
+            twi_slarw |= address << 1;
         
-        // build sla+w, slave device address + w bit
-        twi_slarw = TW_WRITE;
-        twi_slarw |= address << 1;
+            // if we're in a repeated start, then we've already sent the START
+            // in the ISR. Don't do it again.
         
-        // if we're in a repeated start, then we've already sent the START
-        // in the ISR. Don't do it again.
-        //
-        if (true == twi_inRepStart) {
-            // if we're in the repeated start state, then we've already sent the start,
-            // (@@@ we hope), and the TWI statemachine is just waiting for the address byte.
-            // We need to remove ourselves from the repeated start state before we enable interrupts,
-            // since the ISR is ASYNC, and we could get confused if we hit the ISR before cleaning
-            // up. Also, don't enable the START interrupt. There may be one pending from the 
-            // repeated start that we sent outselves, and that would really confuse things.
-            twi_inRepStart = false;			// remember, we're dealing with an ASYNC ISR
-            do {
-            TWDR = twi_slarw;				
-            } while(TWCR & _BV(TWWC));
-            TWCR = _BV(TWINT) | _BV(TWEA) | _BV(TWEN) | _BV(TWIE);	// enable INTs, but not START
-        }
-        else
-            // send start condition
+            if (true == twi_inRepStart) {
+                // if we're in the repeated start state, then we've already sent the start,
+                // (@@@ we hope), and the TWI statemachine is just waiting for the address byte.
+                // We need to remove ourselves from the repeated start state before we enable interrupts,
+                // since the ISR is ASYNC, and we could get confused if we hit the ISR before cleaning
+                // up. Also, don't enable the START interrupt. There may be one pending from the 
+                // repeated start that we sent outselves, and that would really confuse things.
+                twi_inRepStart = false;			// remember, we're dealing with an ASYNC ISR
+                do {
+                TWDR = twi_slarw;				
+                } while(TWCR & _BV(TWWC));
+                TWCR = _BV(TWINT) | _BV(TWEA) | _BV(TWEN) | _BV(TWIE);	// enable INTs, but not START
+            }
+            
+            else
             TWCR = _BV(TWINT) | _BV(TWEA) | _BV(TWEN) | _BV(TWIE) | _BV(TWSTA);	// enable INTs
 
-        // wait for write operation to complete
-        while(wait && (TWI_MTX == twi_state)){
-            continue;
-        }
-        
-        if (twi_error == 0xFF)
-            return 0;	// success
-        else if (twi_error == TW_MT_SLA_NACK)
-            return 2;	// error: address send, nack received
-        else if (twi_error == TW_MT_DATA_NACK)
-            return 3;	// error: data send, nack received
-        else
-            return 4;	// other twi error
+            
+            /*
+            // wait for write operation to complete
+            while(wait && (TWI_MTX == twi_state)){
+               continue;
+            }
+            */
+            if (twi_error == 0xFF)
+                return 0;	// success
+            else if (twi_error == TW_MT_SLA_NACK)
+                return 2;	// error: address send, nack received
+            else if (twi_error == TW_MT_DATA_NACK)
+                return 3;	// error: data send, nack received
+            else
+                return 4;	// other twi error
+            
         }
 
         uint8_t twi_readFrom(uint8_t address, uint8_t* data, uint8_t length, uint8_t sendStop)
@@ -274,15 +279,13 @@ Example : samples/    // to be filled later
     /////////////////////Wire
 
     #define BUFFER_LENGTH 32
-
-    // WIRE_HAS_END means Wire has end()
-    #define WIRE_HAS_END 1
-    var[BUFFER_LENGTH] u8 rxBuffer;
+    #define WIRE_HAS_END 1 // WIRE_HAS_END means Wire has end()
+    var[BUFFER_LENGTH] u8 rxBuffer=[];
     var u8 rxBufferIndex = 0;
     var u8 rxBufferLength = 0;
 
     var u8 txAddress = 0;
-    var[BUFFER_LENGTH] byte txBuffer;
+    var[BUFFER_LENGTH] byte txBuffer=[];
     var u8 txBufferIndex = 0;
     var u8 txBufferLength = 0;
 
@@ -305,14 +308,13 @@ Example : samples/    // to be filled later
     output (u8,byte&&,u8) I2C_REQUEST_SEND;
     var u8 send_STATUS=1;
     output (u8,byte&&,u8) I2C_REQUEST_RECEIVE;
-    input (u8,u8) I2C_REQUEST_DONE;
+    input (u8,int) I2C_REQUEST_DONE;
 
     output (u8 address,byte&& buffer,u8 number_of_bytes) I2C_REQUEST_SEND do
-
-        // indicate that we are transmitting
-        outer.transmitting = 1;
-        // set address of targeted slave
-        outer.txAddress = address;
+       
+        outer.transmitting = 1;// indicate that we are transmitting
+        outer.txAddress = address;// set address of targeted slave
+        
         // reset tx buffer iterator vars
         outer.txBufferIndex = 0;
         outer.txBufferLength = 0;
@@ -333,20 +335,19 @@ Example : samples/    // to be filled later
             
         end
     
-        var u8 ret = _twi_writeTo(outer.txAddress, &&outer.txBuffer as u8, outer.txBufferLength, 1, 1);
+        var u8 ret = _twi_writeTo(outer.txAddress, &&outer.txBuffer as u8&&, outer.txBufferLength, 1, 1);
         // reset tx buffer iterator vars
         outer.txBufferIndex = 0;
         outer.txBufferLength = 0;
         // indicate that we are done transmitting
         outer.transmitting = 0;
-        //return ret;
+        //return ret; 
     end
 
     output (u8 address,byte&& buffer,u8 number_of_bytes) I2C_REQUEST_RECEIVE do
         
-        // clamp to buffer length
         if number_of_bytes > BUFFER_LENGTH then
-            number_of_bytes = BUFFER_LENGTH;
+            number_of_bytes = BUFFER_LENGTH;// clamp to buffer length
         end
         
         // perform blocking read into buffer
@@ -521,19 +522,19 @@ Example : samples/    // to be filled later
             break;
             case TW_ST_DATA_NACK: // received nack, we are done 
             case TW_ST_LAST_DATA: // received ack, but we are done already!
-            // ack future responses
-            twi_reply(1);
-            // leave slave receiver state
-            twi_state = TWI_READY;
-            break;
+                // ack future responses
+                twi_reply(1);
+                // leave slave receiver state
+                twi_state = TWI_READY;
+                break;
 
             // All
             case TW_NO_INFO:   // no state information
-            break;
+                break;
             case TW_BUS_ERROR: // bus error, illegal stop/start
-            twi_error = TW_BUS_ERROR;
-            twi_stop();
-            break;
+                twi_error = TW_BUS_ERROR;
+                twi_stop();
+                break;
         }
         }
         emit I2C_REQUEST_DONE(1,1);
