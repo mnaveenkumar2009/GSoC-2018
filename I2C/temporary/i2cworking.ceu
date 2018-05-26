@@ -1,0 +1,34 @@
+#include "arduino/avr.ceu"
+#include "arduino/arduino.ceu"
+    
+native/pre do
+    ##include <util/twi.h>
+    #include "twi.h"
+    #include "Wire.h"
+end
+output on/off I2C;
+output (u8,byte&&,u8) I2C_REQUEST_SEND;
+
+output (on/off v) I2C do
+    if v then
+        {Wire.begin();}
+    else
+        {Wire.end();}
+    end
+end
+
+output (u8 address,byte&& buffer,u8 number_of_bytes) I2C_REQUEST_SEND do
+    {
+        Wire.beginTransmission(@address);
+        Wire.write(@(*buffer));
+        Wire.endTransmission();
+    }
+end
+
+output (u8 address,byte&& buffer,u8 number_of_bytes) I2C_REQUEST_RECEIVE do
+    {
+        Wire.beginTransmission(@address);
+        Wire.write(@(*buffer));
+        Wire.endTransmission();
+    }
+end

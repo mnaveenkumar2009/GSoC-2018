@@ -2,12 +2,12 @@
 
 int led = 13;
 int errorLed = 12;
-int led1 = 11;
-int led2 = 10;
+int led1 = 12;
+int led2 = 11;
 int button1 = 6;
 int button2 = 7;
 
-unsigned char SLA = 4;	// slave address
+unsigned char SLA = 4;  // slave address
 unsigned char sendData = 0;
 unsigned char getData = 0;
 

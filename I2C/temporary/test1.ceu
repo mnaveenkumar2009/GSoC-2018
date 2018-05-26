@@ -1,0 +1,58 @@
+/*
+This is a sample code of the master sending and receiving 1 byte of data 1 byte of data through the slave.
+The following code explains the process of the I2C communication between the master and the slave.
+The input pins 6 and 7 set the sendData to respective value between 0 and 3 based on their states (eg : if 6 and 7 are both high, the sendData becomes equal to 3)
+The output pins 12 and 11 are connected to LEDs that light up based on the recieved data by the slave at address 0x80
+
+In case of error in transmission of data:
+  - master sending error lights up the LED connected to pin 10
+  - master receiving error lights up the LED connected to pin 9
+These errors could be caused by receiving a NACK or insufficient Buffer Size or any other TWI error
+*/
+
+
+#include "wclock.ceu"
+#include "arduino/arduino.ceu"
+#include "arduino/avr.ceu"
+
+#include "arduino/isr/avr/i2cworking.ceu"
+output bool PIN_13;
+output bool PIN_12;
+output bool PIN_11;
+output bool PIN_10;//error led
+output bool PIN_9;//error led
+{
+  pinMode(6,INPUT_PULLUP);
+  pinMode(7,INPUT_PULLUP);  
+}
+
+output on/off I2C;
+emit I2C(on);
+
+output (u8,byte&&,u8) I2C_REQUEST_SEND;
+output (u8,byte&&,u8) I2C_REQUEST_RECEIVE;
+
+var u8 sla =4;	// slave address
+
+var[1] byte getData=[0];
+var[1] byte sendData=[0];
+
+par/and do
+  var bool state =false;
+  loop do
+    emit PIN_13(on);
+    await 1s;
+    emit PIN_13(off);
+    await 1s;
+  end
+with
+  loop do
+  
+    var int b1 = 1-_digitalRead(6);
+    var int b2 = 1-_digitalRead(7);
+    sendData[0]=b1+(b2<<1);
+    emit I2C_REQUEST_SEND(sla,&&sendData[0],1);
+    await 1s;
+  end
+  
+end
