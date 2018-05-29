@@ -1,9 +1,9 @@
 #include <compat/twi.h>
 
 int led = 13;
-int errorLed = 12;
-int led1 = 11;
-int led2 = 10;
+int errorLed = 10;
+int led1 = 12;
+int led2 = 11;
 int button1 = 6;
 int button2 = 7;
 
@@ -22,7 +22,6 @@ void setup() {
   
   // 0) init TWI @ 100 kHz
   TWBR = ((F_CPU / 100000L) - 16) / 2;
-  unsigned char temp = TWCR;
   delay(2); // wait for arduino micro to init;
 }
 

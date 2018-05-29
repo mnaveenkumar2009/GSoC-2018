@@ -15,14 +15,16 @@ These errors could be caused by receiving a NACK or insufficient Buffer Size or 
 #include "arduino/arduino.ceu"
 #include "arduino/avr.ceu"
 
-#include "arduino/isr/avr/i2c.ceu"
+#include "arduino/isr/avr/i2cworking.ceu"
 output bool PIN_13;
 output bool PIN_12;
 output bool PIN_11;
 output bool PIN_10;//error led
 output bool PIN_9;//error led
-input int PIN_6;
-input int PIN_7;
+{
+  pinMode(6,INPUT_PULLUP);
+  pinMode(7,INPUT_PULLUP);  
+}
 
 output on/off I2C;
 emit I2C(on);
@@ -30,12 +32,13 @@ emit I2C(on);
 output (u8,byte&&,u8) I2C_REQUEST_SEND;
 output (u8,byte&&,u8) I2C_REQUEST_RECEIVE;
 
-var u8 sla =0x80;	// slave address
+var u8 sla =4;	// slave address
 
 var[1] byte getData=[0];
 var[1] byte sendData=[0];
 
 par/and do
+  var bool state =false;
   loop do
     emit PIN_13(on);
     await 1s;
@@ -44,38 +47,32 @@ par/and do
   end
 with
   loop do
-    /*
+    
     emit I2C_REQUEST_RECEIVE(sla, &&getData[0], 1);
-    var int status1;
-    var u8 n;
+    var u8 status1=0;
+    var u8 n=0;
     (n,status1) = await I2C_REQUEST_DONE;
+    
     if (status1==0) then
       emit PIN_12((getData[0] & 1) as bool);
       emit PIN_11(((getData[0] >> 1) & 1) as bool);
       emit PIN_9(off);
     else
       emit PIN_9(on);
-      //_Serial.println("the following error id occured");
-      //_Serial.println(status1);
-      //_Serial.println(n);
     end
-    */
-    var int b1 = _digitalRead(6);
-    var int b2 = _digitalRead(7);
-    sendData[0]=b1+(b2<<1);
-    emit PIN_10(on);
-    emit I2C_REQUEST_SEND(sla,&&sendData[0],1);
     
-    var u8 n;
-    var int status2;
+    var int b1 = 1-_digitalRead(6);
+    var int b2 = 1-_digitalRead(7);
+    sendData[0]=b1+(b2<<1);
+    emit I2C_REQUEST_SEND(sla,&&sendData[0],1);
+    var u8 n=0;
+    var u8 status2=0;
     (n,status2) = await I2C_REQUEST_DONE;
     if(status2!=0) then
       emit PIN_10(on);
-      //_Serial.println("the following error id occured");
-      //_Serial.println(status2);
-      //_Serial.println(n);
     else
       emit PIN_10(off);
     end
   end
+  
 end
