@@ -43,8 +43,8 @@ with
   loop do
   {
     TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);
-    delay(300);
   }
+  await 300ms;
   end
   
 end
