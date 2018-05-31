@@ -10,10 +10,9 @@ In case of error in transmission of data:
 These errors could be caused by receiving a NACK or insufficient Buffer Size or any other TWI error
 */
 
-
 #include "wclock.ceu"
 #include "arduino/arduino.ceu"
-
+#include "gpio.ceu"
 #include "i2c.ceu"
 
 output bool PIN_13;
@@ -23,16 +22,18 @@ output bool PIN_10;//error led
 output bool PIN_9;//error led
 {
   pinMode(6,INPUT_PULLUP);
-  pinMode(7,INPUT_PULLUP);  
+  pinMode(7,INPUT_PULLUP);
 
   TWBR = ((F_CPU / 100000L) - 16) / 2;
-  delay(2); // wait for arduino micro to init;
 }
+await 2ms;
 
 var u8 sla =4;	// slave address
 
+
 par/and do
   var bool state =false;
+  
   loop do
     emit PIN_13(on);
     await 1s;
@@ -40,11 +41,11 @@ par/and do
     await 1s;
   end
 with
+    
   loop do
   {
     TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);
   }
-  await 300ms;
+  await I2C_REQUEST_DONE;
   end
-  
 end

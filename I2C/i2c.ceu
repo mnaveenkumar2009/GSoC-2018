@@ -16,12 +16,7 @@ input (u8,u8) I2C_REQUEST_DONE;// await the status of the request
 
 Example : samples/    // to be filled later
 */
-//#include "../i2c.ceu"  the below is from the included file
-output on/off         I2C;
-output (u8,byte&&,u8) I2C_REQUEST_SEND;
-output (u8,byte&&,u8) I2C_REQUEST_RECEIVE;
-input  (u8,u8)        I2C_REQUEST_DONE;
-
+#include "../i2c.ceu"
 var bool i2c_isMaster = true;
 var u8 deviceAddress;
 native/pre do
