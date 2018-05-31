@@ -198,6 +198,6 @@ spawn async/isr [_TWI_vect_num,0] do
       twi_error = TW_BUS_ERROR;
       twi_stop();
       break;
-  }}
+    }}
     emit I2C_REQUEST_DONE(outer.no_bytes,outer.status);
 end
