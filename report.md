@@ -1,5 +1,18 @@
 -------------------------------------------------------------------------------
-`[28-May] -> [4-June]`
+`[4-June] -> [10-June]`
+-------------------------------------------------------------------------------
+
+### `[4-June]` What will I do this week?
+
+- Complete the examples for Read, Write and make an API for the TWI.
+- Perform tests and apply enhancements if any.
+
+### `[11-June]` What did I do last week?
+
+- 
+
+-------------------------------------------------------------------------------
+`[28-May] -> [3-June]`
 -------------------------------------------------------------------------------
 
 ### `[28-May]` What will I do this week?
@@ -9,7 +22,8 @@
 
 ### `[4-June]` What did I do last week?
 
-- 
+- Wrote examples to show the working of TWI.
+- Rescheduled finding reason for slowing down of LED blink rate to after making the API.
 
 -------------------------------------------------------------------------------
 `[21-May] -> [27-May]`
