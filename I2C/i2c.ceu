@@ -21,10 +21,11 @@ var bool i2c_isMaster = true;
 var u8 deviceAddress;
 native/pre do
     #define TWI_FREQ 100000
+    #include "i2c.h"
     ##include <compat/twi.h>
     int getData;
     int sendData;
-    int SLA=4;
+    int SLA=4,t1,t2;
 end
 native 
     _TWI_vect,
@@ -72,14 +73,14 @@ output (u8 address,byte&& buffer,u8 n_byte) I2C_REQUEST_RECEIVE do
 end
 
 spawn async/isr [_TWI_vect] do
-{	// TWI interrupt service routine
+
+{
   switch(TW_STATUS){
     case TW_START:
       // 2) send SLA+W
       TWDR = (SLA << 1) | TW_WRITE;
       TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
       break;
-    
     case TW_MT_SLA_ACK:
       sendData = 0;
   	  if (!digitalRead(6)) sendData |= 1;
@@ -114,8 +115,7 @@ spawn async/isr [_TWI_vect] do
 	  
       // 8) send stop condition
       TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
-      break;
-    
+break;
     default:
       // 9) check for errors and if one occurs send stop condition
       TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
@@ -128,6 +128,6 @@ spawn async/isr [_TWI_vect] do
     // Ok, it is, we now need to go one step further on the protocol...
     // For now, let's put a fail assert to be sure that we are reaching this
     // point:
-    //_ceu_arduino_assert(0, 5);  // blinks 5 times periodically forever
     emit I2C_REQUEST_DONE(1,1);
+    //_ceu_arduino_assert(0, 5);
 end
