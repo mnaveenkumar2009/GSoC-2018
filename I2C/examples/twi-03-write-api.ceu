@@ -5,7 +5,7 @@ The program starts by setting the value of the Bit Rate (TWBR).
 It triggers the interrupt by sending the start condition continously after the previous request is completed.
 Since it is only 1 byte, a repeated start isn't sent. To view multiple bytes transfer see example 04.
 The Start condition further changes the TWDR to SLA Write and the TWCR is set to resume the transfer.
-Further, the TWDR is set to the value we are going to send. In this case count%2 which toggles the data as count is increased every time.
+Further, the TWDR is set to the value we are going to send. In this case it is !(input in pin 6) which is passed as an argument to the output
 
 
 Testing:
@@ -28,7 +28,7 @@ native/pre do
     int SLA;
     int count=1;
 end
-
+{pinMode(6,INPUT_PULLUP);}
 var int requestmode=-1;// 0 for Write and 1 for Read
 var u8 errorcode=1;
 /*
@@ -54,15 +54,12 @@ end
 spawn async/isr [_TWI_vect] do
   
   {
-    SLA=4;
-    
     switch(TW_STATUS){
       
       case TW_START:
           if(@(outer.requestmode)!=-1){
             TWDR = (SLA << 1) | (@(outer.requestmode)); // SLA + Read/Write
             @(outer.requestmode)=-1;
-            ceu_arduino_assert(0,3);
           }
           TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE); // Continue Transfer
           break;
@@ -78,12 +75,11 @@ spawn async/isr [_TWI_vect] do
           
       default:
           @(outer.errorcode)=3;
+          //ceu_arduino_assert(0,5);
           TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);//default case sends stop condition
-    }
-    
-  }
-  
-  emit I2C_REQUEST_DONE(1,outer.errorcode);
+    } 
+  }  
+  emit I2C_REQUEST_DONE(1,0);
   
 end
 
@@ -94,18 +90,18 @@ end
 
 loop do
     var byte sendData = 1-(_digitalRead (6) as byte);
-    /*
+    
     if sendData==1 then
       _digitalWrite(13,1);
     else
       _digitalWrite(13,0);
     end
-    */
+    
     emit I2C_REQUEST_SEND(4,&&sendData,1);
     var u8 nob;
-    var u8 status;
+    var u8 status=0;
     (nob,status) = await I2C_REQUEST_DONE;
     if status!=0 then
       _Serial.println("error occured");
-    end
+    end 
 end
