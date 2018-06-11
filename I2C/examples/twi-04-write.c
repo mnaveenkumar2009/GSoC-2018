@@ -18,7 +18,6 @@ void I2C_REQUEST_SEND(int address,int buffer[5],int n_byte){
 }
 void setup()
 {
-pinMode(6,INPUT_PULLUP);
 TWBR = ((F_CPU / 100000L) - 16) / 2;
   Serial.begin(9600);
 }

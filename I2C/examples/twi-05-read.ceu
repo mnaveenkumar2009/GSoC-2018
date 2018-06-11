@@ -10,12 +10,11 @@ We will emit PIN 12 to the value of the data received.
 Testing:
     - The ACK from the slave was acheived by a fully connected master slave TWI system and the LED connected to the slave blinks every 300ms corresponding to the data received.
     - When a wrong address is mentioned or the slave is disconnected the NACK is assumed and the assert is called accordingly.
-    - When 300ms is replaced by FOREVER the data is sent only once as expected
-
+    - When 300ms is replaced by FOREVER the data is sent only once as expected.
 
 Circuit :
     - SDA,SCL lines of both master and slave pulled up by a resistor to 5V.
-    - 5V and GND of both master and slave connected respectively to operate both at same voltage
+    - 5V and GND of both master and slave connected respectively to operate both at same voltage.
     - an LED connected to the PIN 12 that is set to the data received.
     - The slave can be connected to a switch and send data received on the pin connected tot he switch. Any alternate methods to send data is also fine.
 
@@ -28,6 +27,7 @@ native
 native/pre do
     ##include <compat/twi.h>
     int SLA=4;
+    pinMode(12,OUTPUT);
 end
 spawn async/isr [_TWI_vect] do
 {
@@ -52,9 +52,9 @@ spawn async/isr [_TWI_vect] do
 }
 end
 
-{TWBR = ((F_CPU / 100000L) - 16) / 2;}// Bit rate formula
+{TWBR = ((F_CPU / 100000L) - 16) / 2;} // Bit rate formula
 
 loop do
-    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);}//Start Condition
-    await 300ms;//send start every 300ms
+    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);} //Start Condition
+    await 300ms; //send start every 300ms
 end

@@ -37,7 +37,12 @@ errorcode :
 
 #define TXMAXBUFLEN 32 // Transmit buffer length
 
-var[TXMAXBUFLEN] byte twi_transmit_buffer=0;// max buffer length = 32
+var[TXMAXBUFLEN] byte twi_transmit_buffer;// max buffer length = 32
+var u8 i;
+loop i in [1->TXMAXBUFLEN] do
+    twi_transmit_buffer = twi_transmit_buffer .. [0];
+end
+
 input  (u8,u8) I2C_REQUEST_DONE;
 
 output (u8 address,byte&& buffer,u8 n_byte) I2C_REQUEST_SEND do
@@ -56,30 +61,42 @@ end
 
 spawn async/isr [_TWI_vect] do
   
-  {    
-    switch(TW_STATUS){      
-      case TW_START:
-          if(@(outer.requestmode)!=-1){
-            TWDR = (SLA << 1) | (@(outer.requestmode)); // SLA + Read/Write
-            @(outer.requestmode)=-1;
-            ceu_arduino_assert(0,3);
-          }
-          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE); // Continue Transfer
-          break;
+  { 
+    switch(TW_STATUS){
+    
+        case TW_START:
+            @(outer.errorcode) = 0;
+            if(@(outer.requestmode)!=-1){
+                TWDR = (SLA << 1) | (requestmode); // SLA + Read/Write (Write in this case)
+            }
+            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE); // Continue Transfer
+            break;
       
-      case TW_MT_SLA_ACK:
-          @outer.errorcode = 0;
-          TWDR = @(outer.twi_transmit_buffer);
-          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
-          break;
-      case TW_MT_SLA_NACK:
-          @(outer.errorcode)=2;// in case of slave not connected or receiving NACK from slave
-          break;
-          
-      default:
-          @(outer.errorcode)=3;
-          TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);//default case sends stop condition
-    }    
+        case TW_MT_SLA_ACK:
+            if(TXBuffIndex<TXBuffLen){
+                TWDR = @(outer.twi_transmit_buffer[{TXBuffIndex++}]);
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+            }
+            else{
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWSTO);
+            }
+            break;
+        case TW_MT_DATA_ACK:
+            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWSTA);// Send Repeated Start
+	        break;
+        case TW_REP_START:
+      		TWDR = (SLA << 1) | @(outer.requestmode);// SLA + Read/Write (Write in this case)
+    		TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+    		break;
+        case TW_MT_SLA_NACK:
+        case TW_MT_DATA_NACK:
+            @outer.errorcode=2;// in case of slave not connected or receiving NACK from slave or requesting more data from the slave than the amount sent
+            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
+            break;
+        default:
+            @outer.errorcode=3;
+            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);//default case sends stop condition
+    }
   }
   
   emit I2C_REQUEST_DONE(1,outer.errorcode);

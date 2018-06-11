@@ -9,15 +9,16 @@ Further, the TWDR is set to the value we are going to send. In this case it is !
 
 
 Testing:
-    - The ACK from the slave was acheived by a fully connected master slave TWI system and the LED connected to the slave blinks every 300ms corresponding to the data received.
+    - The ACK from the slave was acheived by a fully connected master slave TWI system and the slave outputs the data received to Serial to see the data.
     - When a wrong address is mentioned or the slave is disconnected the NACK is assumed and the assert is called accordingly.
-    - When 300ms is replaced by FOREVER the data is sent only once as expected
+    - Removing the loop and writing await FOREVER at end to stop program from termination causes the program to send the request only once and write only once. This can be observed in the Serial monitor of the slave.
 
 
 Circuit :
     - SDA,SCL lines of both master and slave pulled up by a resistor to 5V.
-    - 5V and GND of both master and slave connected respectively to operate both at same voltage
-    - an LED connected to the slave that is set to the data received to observe the blinking pattern
+    - 5V and GND of both master and slave connected respectively to operate both at same voltage.
+    - A pushbutton that is grounded on one end and the middle connected to pin 6 of master.
+    - an LED connected to the slave that is set to the data received to observe the output or a Serial monitor to display the data received.
 */
 #include "wclock.ceu"
 native
@@ -56,31 +57,33 @@ spawn async/isr [_TWI_vect] do
   {
     switch(TW_STATUS){
       
-      case TW_START:
-          if(@(outer.requestmode)!=-1){
-            TWDR = (SLA << 1) | (@(outer.requestmode)); // SLA + Read/Write
-            @(outer.requestmode)=-1;
-          }
-          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE); // Continue Transfer
-          break;
+        case TW_START:
+            @outer.errorcode = 0;
+            if(@(outer.requestmode)!=-1){
+                TWDR = (SLA << 1) | (@(outer.requestmode)); // SLA + Read/Write
+                @(outer.requestmode)=-1;
+            }
+            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE); // Continue Transfer
+            break;
       
-      case TW_MT_SLA_ACK:
-          @outer.errorcode = 0;
-          TWDR = @(outer.twi_transmit_buffer);
-          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
-          break;
-      case TW_MT_SLA_NACK:
-          @(outer.errorcode)=2;// in case of slave not connected or receiving NACK from slave
-          break;
+        case TW_MT_SLA_ACK:
+            TWDR = @(outer.twi_transmit_buffer);
+            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+            break;
+        case TW_MT_DATA_ACK:
+            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWSTO); // send stop after sending
+            break;
+        case TW_MT_SLA_NACK:
+            @(outer.errorcode)=2;// in case of slave not connected or receiving NACK from slave
+            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
+            break;
           
-      default:
-          @(outer.errorcode)=3;
-          //ceu_arduino_assert(0,5);
-          TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);//default case sends stop condition
+        default:
+            @(outer.errorcode)=3;
+            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);//default case sends stop condition
     } 
   }  
-  emit I2C_REQUEST_DONE(1,0);
-  
+  emit I2C_REQUEST_DONE(1,outer.errorcode);
 end
 
 
@@ -90,18 +93,11 @@ end
 
 loop do
     var byte sendData = 1-(_digitalRead (6) as byte);
-    
-    if sendData==1 then
-      _digitalWrite(13,1);
-    else
-      _digitalWrite(13,0);
-    end
-    
     emit I2C_REQUEST_SEND(4,&&sendData,1);
     var u8 nob;
-    var u8 status=0;
-    (nob,status) = await I2C_REQUEST_DONE;
+    var u8 status;
+    (nob,status)=await I2C_REQUEST_DONE;
     if status!=0 then
-      _Serial.println("error occured");
-    end 
+        _ceu_arduino_assert(0,errorcode);
+    end
 end
