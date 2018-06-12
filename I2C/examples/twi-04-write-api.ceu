@@ -24,7 +24,6 @@ native/pre do
     volatile int TXBuffIndex=0;
     int TXBuffLen=0;
 end
-
 var int requestmode=-1;// 0 for Write and 1 for Read
 var u8 errorcode=1;
 /*
@@ -47,14 +46,14 @@ input  (u8,u8) I2C_REQUEST_DONE;
 
 output (u8 address,byte&& buffer,u8 n_byte) I2C_REQUEST_SEND do
     outer.requestmode=0;// write mode
+    if n_byte>TXMAXBUFLEN then
+        n_byte=TXMAXBUFLEN; // trimming the data to fit buffer length
+    end
     {   
         SLA=@address;
         TXBuffIndex = 0;
         TXBuffLen = @n_byte;
     }
-    if n_byte>TXMAXBUFLEN then
-        n_byte=TXMAXBUFLEN; // trimming the data to fit buffer length
-    end
     var u8 i;
     loop i in [0->(n_byte-1)] do
         outer.twi_transmit_buffer[i] = buffer[i];
@@ -78,11 +77,14 @@ spawn async/isr [_TWI_vect] do
             break;
       
         case TW_MT_SLA_ACK:
+            if(TXBuffIndex==1)
+            ceu_arduino_assert(0,4);
             if(TXBuffIndex<TXBuffLen){
                 TWDR = @(outer.twi_transmit_buffer[{TXBuffIndex++}]);
                 TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
             }
             else{
+            ceu_arduino_assert(0,4);
                 TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWSTO);
             }
             break;

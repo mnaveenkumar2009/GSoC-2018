@@ -1,4 +1,19 @@
 -------------------------------------------------------------------------------
+`[11-June] -> [17-June]`
+-------------------------------------------------------------------------------
+
+### `[11-June]` What will I do this week?
+
+- Complete/Fix all the current examples with working API for Master
+    - emit input after completion of send/receive or an error
+- Create examples for Slave and perform tests (Slave Read and Write with and without API)
+- Combine both and complete the API
+
+### `[18-June]` What did I do last week?
+
+-
+
+-------------------------------------------------------------------------------
 `[4-June] -> [10-June]`
 -------------------------------------------------------------------------------
 
@@ -9,7 +24,8 @@
 
 ### `[11-June]` What did I do last week?
 
-- 
+- Completed examples for Read and Write and performed tests.
+- Rescheduled enhancements and updates for the written examples to the beginning of next week.
 
 -------------------------------------------------------------------------------
 `[28-May] -> [3-June]`
