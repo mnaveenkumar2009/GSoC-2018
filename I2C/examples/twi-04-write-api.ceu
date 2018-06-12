@@ -21,8 +21,8 @@ native
 native/pre do
     ##include <compat/twi.h>
     int SLA;
-    volatile int TXBuffIndex;
-    int TXBuffLen;
+    volatile int TXBuffIndex=0;
+    int TXBuffLen=0;
 end
 
 var int requestmode=-1;// 0 for Write and 1 for Read
@@ -47,7 +47,11 @@ input  (u8,u8) I2C_REQUEST_DONE;
 
 output (u8 address,byte&& buffer,u8 n_byte) I2C_REQUEST_SEND do
     outer.requestmode=0;// write mode
-    {SLA=@address;}
+    {   
+        SLA=@address;
+        TXBuffIndex = 0;
+        TXBuffLen = @n_byte;
+    }
     if n_byte>TXMAXBUFLEN then
         n_byte=TXMAXBUFLEN; // trimming the data to fit buffer length
     end
