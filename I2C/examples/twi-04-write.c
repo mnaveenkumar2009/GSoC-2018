@@ -22,9 +22,9 @@ TWBR = ((F_CPU / 100000L) - 16) / 2;
   Serial.begin(9600);
 }
 void loop(){
-  int sendData[5] = {0,1,2,3,4};
+  int sendData[5] = {'h','e','l','l','o'};
             Serial.println(2);
-    I2C_REQUEST_SEND(4,sendData,2);
+    I2C_REQUEST_SEND(4,sendData,5);
   delay(300);
 }
 
@@ -38,10 +38,11 @@ ISR(TWI_vect){
             TWDR = (SLA << 1) | (requestmode); // SLA + Read/Write
             requestmode=-1;
           }
-          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE); // Continue Transfer
+          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA); // Continue Transfer
           break;
       
       case TW_MT_SLA_ACK:
+    	case TW_MT_DATA_ACK:
           if(TXBuffIndex<TXBuffLen){
             Serial.println(3);
             Serial.println("vd");
@@ -54,11 +55,6 @@ ISR(TWI_vect){
               TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWSTO);
           }
           break;
-    case TW_MT_DATA_ACK:
-      // 4) send repeated start condition 
-    		Serial.println("99");
-            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWSTA);
-	  break;
       case TW_REP_START: 
     		Serial.println("897");
       		TWDR = (SLA << 1) | TW_WRITE;
