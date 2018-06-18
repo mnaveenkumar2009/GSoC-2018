@@ -40,30 +40,17 @@ errorcode :
 
 #define TXMAXBUFLEN 32 // Transmit buffer length
 var[TXMAXBUFLEN] byte twi_transmit_buffer;// max buffer length = 32
-var u8 i;
-loop i in [1->TXMAXBUFLEN] do
-    twi_transmit_buffer = twi_transmit_buffer .. [0];
-end
 
 input  (u8,u8) I2C_REQUEST_DONE;
 
-output (u8 address,byte&& buffer,u8 n_byte) I2C_REQUEST_SEND do
+output (u8 address) I2C_REQUEST_SEND do
     outer.requestmode=0;// write mode
-    if n_byte>TXMAXBUFLEN then
-        n_byte=TXMAXBUFLEN; // trimming the data to fit buffer length
-    end
     {   
         SLA=@address;
         TXBuffIndex = 0;
-        TXBuffLen = @n_byte;
+        TXBuffLen = @($outer.twi_transmit_buffer);
     }
-    var u8 i;
-    loop i in [0->(n_byte-1)] do
-        outer.twi_transmit_buffer[i] = buffer[i];
-    end
-    {
-      TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);// start condition
-    }
+    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);}// start condition
 end
 
 spawn async/isr [_TWI_vect] do
@@ -109,6 +96,7 @@ spawn async/isr [_TWI_vect] do
   }
   if done then
     emit I2C_REQUEST_DONE({TXBuffLen},outer.errorcode);
+    outer.twi_transmit_buffer = [];
   end
 end
 
@@ -116,7 +104,7 @@ end
 {TWBR = ((F_CPU / 100000L) - 16) / 2;}// Bit rate formula
 
 loop do
-    var[5] byte sendData = [0,1,2,3,4];
-    emit I2C_REQUEST_SEND(4,&&sendData[0],5);
+    twi_transmit_buffer = twi_transmit_buffer .. [0,1,2];
+    emit I2C_REQUEST_SEND(4);
     await I2C_REQUEST_DONE;
 end

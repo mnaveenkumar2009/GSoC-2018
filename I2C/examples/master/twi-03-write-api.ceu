@@ -43,20 +43,16 @@ errorcode :
 var byte twi_transmit_buffer=0;// max buffer length = 1 in this 1 byte example
 input  (u8,u8) I2C_REQUEST_DONE;
 
-output (u8 address,byte&& buffer,u8 n_byte) I2C_REQUEST_SEND do
+output (u8 address) I2C_REQUEST_SEND do
     outer.requestmode=0;// write mode
     {SLA=@address;}
-    outer.twi_transmit_buffer = *buffer;
-    {
-      TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);// start condition
-    }
+    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);}// start condition
 end
 
 spawn async/isr [_TWI_vect] do
   
   {
-    switch(TW_STATUS){
-      
+    switch(TW_STATUS){      
         case TW_START:
             @outer.errorcode = 0;
             if(@(outer.requestmode)!=-1){
@@ -87,17 +83,10 @@ spawn async/isr [_TWI_vect] do
 end
 
 
-{
-    TWBR = ((F_CPU / 100000L) - 16) / 2;// Bit rate formula
-}
+{TWBR = ((F_CPU / 100000L) - 16) / 2;}// Bit rate formula
 
 loop do
-    var byte sendData = 1-(_digitalRead (6) as byte);
-    emit I2C_REQUEST_SEND(4,&&sendData,1);
-    var u8 nob;
-    var u8 status;
-    (nob,status)=await I2C_REQUEST_DONE;
-    if status!=0 then
-        _ceu_arduino_assert(0,errorcode);
-    end
+    twi_transmit_buffer = 1-(_digitalRead (6) as byte);
+    emit I2C_REQUEST_SEND(4);
+    await I2C_REQUEST_DONE;
 end

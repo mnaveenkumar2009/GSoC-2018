@@ -64,12 +64,7 @@ spawn async/isr [_TWI_vect] do
 end
 
 {
-  TWBR = ((F_CPU / 100000L) - 16) / 2;//set bit rate
-}
-await 3ms;// wait for init;        ||to do: find if this is necessary||
-
-
-{
-TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);// start condition
+    TWBR = ((F_CPU / 100000L) - 16) / 2;//set bit rate
+    TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);// start condition
 }
 await 300ms;

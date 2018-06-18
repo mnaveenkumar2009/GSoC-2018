@@ -1,0 +1,142 @@
+/*
+The following program illustrates the process of master read using TWI via a ceu API.
+This example shows multiple bytes data transfer
+The program starts by setting the value of the Bit Rate (TWBR).
+It triggers the interrupt by sending the start condition continously after the previous request is completed.
+The Start condition further changes the TWDR to SLA+Read and the TWCR is set to resume the transfer.
+Once an ACK is received, The interrupts receives the data one by one until all data is received or a NACK is received.
+This data is received by pushing TWDR in the vector twi_receive_buffer.
+
+
+Testing:
+    - The data is received successfully continously with a proper master slave system connected where the slave sends ACK on data sent/request acknowledged.
+    - Removing the loop and adding await forever at the end receives the data only once as expected.
+    - When a wrong address is mentioned or slave doesn't acknowledge the data a NACK is assumed/received and no data is received.
+
+Circuit :
+    - SDA,SCL lines of both master and slave pulled up by a resistor to 5V.
+    - 5V and GND of both master and slave connected respectively to operate both at same voltage.
+    - A Serial monitor to display the data received in the master.
+*/
+#include "wclock.ceu"
+native
+    _TWI_vect,
+;
+native/pre do
+    ##include <compat/twi.h>
+    int SLA;
+    int RXBuffIndex=0;
+    int RXBuffLen=0;
+end
+var int requestmode=-1;// 0 for Write and 1 for Read
+var u8 errorcode=1;
+/*
+errorcode :
+  No error                 0
+  Interrupt not triggered  1
+  NACK received            2
+  Other Errors             3
+*/
+
+#define RXMAXBUFLEN 32 // Receive buffer length
+var[RXMAXBUFLEN] byte twi_receive_buffer;// max buffer length = 32
+
+input  (u8,u8) I2C_REQUEST_DONE;
+
+output (u8 address,u8 n_bytes) I2C_REQUEST_RECEIVE do
+    outer.requestmode=1;// read mode
+    outer.twi_receive_buffer = [];
+    {
+        SLA=@address;
+        RXBuffIndex = 0;
+        RXBuffLen = @n_bytes;
+    }
+    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);}// start condition
+end
+
+spawn async/isr [_TWI_vect] do
+  var bool done = false;
+  var int value = -1;
+  { 
+    switch(TW_STATUS){
+    
+        case TW_START:
+        case TW_REP_START:
+            @(outer.errorcode) = 0;
+            if(@(outer.requestmode)!=-1){
+                Serial.println("1");
+                TWDR = (SLA << 1) | @(outer.requestmode); // SLA + Read/Write (Write in this case)
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA); // Continue Transfer
+            }
+            else{
+                @done=1;
+                Serial.println("2");
+                TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE); // send stop
+            }
+            break;
+      
+        case TW_MR_SLA_ACK:
+            if(RXBuffIndex<RXBuffLen){
+                Serial.println("3");
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA);
+            }
+            else{
+                @done=1;
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);// send NACK
+            }
+            break;
+        case TW_MR_DATA_ACK:
+            if(RXBuffIndex<RXBuffLen){
+                @(value) = TWDR;
+                RXBuffIndex++;
+                Serial.println("5");
+                if(RXBuffIndex!=RXBuffLen)
+                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA);
+                else
+                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+            }
+            else{
+                Serial.println("6");
+                @done=1;
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
+            }
+            break;
+        case TW_MR_DATA_NACK:
+        case TW_MR_SLA_NACK:
+
+            Serial.println("7");
+            @outer.errorcode=2;// in case of slave not connected or receiving NACK from slave or requesting more data from the slave than the amount sent
+            @done=1;
+            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
+            break;
+        default:
+
+            Serial.println("8");
+            @outer.errorcode=3;
+            @done=1;
+            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);//default case sends stop condition
+    }
+  }
+
+  if value!=-1 then
+    {Serial.println(@(value));}
+    //outer.twi_receive_buffer = outer.twi_receive_buffer .. [value as byte];
+  end
+  if done then
+    emit I2C_REQUEST_DONE({RXBuffLen},outer.errorcode);
+    {
+        RXBuffIndex=0;
+        RXBuffLen=0;
+    }
+  end
+end
+
+
+{TWBR = ((F_CPU / 100000L) - 16) / 2;}// Bit rate formula
+{Serial.begin(9600);}
+loop do
+    emit I2C_REQUEST_RECEIVE(4,4);
+    await I2C_REQUEST_DONE;
+    {Serial.println("h");}
+end
+await FOREVER;

@@ -41,7 +41,7 @@ spawn async/isr [_TWI_vect] do
         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
         break;
     case TW_MT_SLA_NACK:
-        ceu_arduino_assert(0,3);// in case of slave not connected or receiving NACK from slave
+        //ceu_arduino_assert(0,3);// in case of slave not connected or receiving NACK from slave
         break;
         
     default:
