@@ -1,4 +1,17 @@
 -------------------------------------------------------------------------------
+`[18-June] -> [24-June]`
+-------------------------------------------------------------------------------
+
+### `[18-June]` What will I do this week?
+
+- Finish the I2C API for slave and test it.
+- Start working on Real time clock.
+
+### `[25-June]` What did I do last week?
+
+- 
+
+-------------------------------------------------------------------------------
 `[11-June] -> [17-June]`
 -------------------------------------------------------------------------------
 
@@ -11,7 +24,12 @@
 
 ### `[18-June]` What did I do last week?
 
--
+- Fixed and modified existing examples.
+    - Sent emit only after completion of transfer
+    - modified API structure to a simpler form with lesser parameters to outputs.
+    - removed repeated start data transfer and replaced it with ack to send/receive data in one go.
+- Finished the API for master and tested it.
+- Rescheduled slave part to next week.
 
 -------------------------------------------------------------------------------
 `[4-June] -> [10-June]`

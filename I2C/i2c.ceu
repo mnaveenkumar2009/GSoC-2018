@@ -171,7 +171,7 @@ spawn async/isr [_TWI_vect] do
     end
     if done then
         if outer.requestmode != -1 then
-            if outer.requestmode == 1 then
+            if outer.requestmode == 0 then
                 emit I2C_REQUEST_DONE({TXBuffLen},outer.errorcode);
             else
                 emit I2C_REQUEST_DONE({RXBuffLen},outer.errorcode);
