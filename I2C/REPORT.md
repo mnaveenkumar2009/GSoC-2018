@@ -28,7 +28,7 @@ TWBR | Two Wire Bit Rate Register | Controls the frequency of the clock (SCL)
 
 ## The TWI Hardware 
 
-![TWI Flow](https://github.com/mnaveenkumar2009/Interrupt-Based-Drivers-for-ceu-arduino/tree/master/I2C/assets/TWI_flow.png)
+![TWI Flow](https://raw.githubusercontent.com/mnaveenkumar2009/Interrupt-Based-Drivers-for-ceu-arduino/master/I2C/assets/TWI_flow.png)
 
 - The Wire library configures the ATmega chip so that the internal TWI hardware uses its pins, which are hardcoded to two of the ATmega's analog pins (4 and 5 on the Duemilanove).
 - The Wire library sets up the TWCR register to generate a START condition.
@@ -147,7 +147,7 @@ Code :
     end
     ```
 
-![Output](slave_rec01.png)
+![Output](https://raw.githubusercontent.com/mnaveenkumar2009/Interrupt-Based-Drivers-for-ceu-arduino/master/I2C/assets/slave_rec01.png)
 
 
 ### Master receiver and Slave sender
