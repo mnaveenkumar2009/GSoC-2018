@@ -24,6 +24,7 @@ native
 ;
 native/pre do
     ##include <compat/twi.h>
+    #include "../print_status.h"
     int SLA;
     volatile int TXBuffIndex=0;
     int TXBuffLen=0;
@@ -56,6 +57,7 @@ end
 spawn async/isr [_TWI_vect] do
   var bool done = false;
   { 
+      print_stat(TW_STATUS);
     switch(TW_STATUS){
     
         case TW_START:
@@ -86,12 +88,12 @@ spawn async/isr [_TWI_vect] do
         case TW_MT_DATA_NACK:
             @outer.errorcode=2;// in case of slave not connected or receiving NACK from slave or requesting more data from the slave than the amount sent
             @done=1;
-            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
+            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE) | (1<<TWEA);
             break;
         default:
             @outer.errorcode=3;
             @done=1;
-            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);//default case sends stop condition
+            TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE) | (1<<TWEA);//default case sends stop condition
     }
   }
   if done then
@@ -102,9 +104,11 @@ end
 
 
 {TWBR = ((F_CPU / 100000L) - 16) / 2;}// Bit rate formula
-
+{Serial.begin(9600);}
 loop do
-    twi_transmit_buffer = twi_transmit_buffer .. [0,1,2];
+    twi_transmit_buffer = [0,1,2,8,9,9];
     emit I2C_REQUEST_SEND(4);
     await I2C_REQUEST_DONE;
+    await 1s;
+    {Serial.println("ho");}
 end

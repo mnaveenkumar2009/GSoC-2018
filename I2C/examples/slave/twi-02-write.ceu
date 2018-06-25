@@ -23,8 +23,8 @@ native/pre do
     ##include <compat/twi.h>
     #include "../print_status.h"
     int SLA;
-    volatile int RXBuffIndex=0;
-    int RXBuffLen=0;
+    volatile int TXBuffIndex=0;
+    int TXBuffLen=0;
 end
 var u8 errorcode=1;
 /*
@@ -36,19 +36,25 @@ errorcode :
 */
 
 #define TXMAXBUFLEN 32 // receive buffer length
-var[TXMAXBUFLEN] byte twi_receive_buffer;// max buffer length = 32
-var int requestmode=-1;// 0 for Write and 1 for Read
+var[TXMAXBUFLEN] byte twi_transmit_buffer;// max buffer length = 32
+var int requestmode = -1;// 0 for Write and 1 for Read
 
 input int I2C_REQUEST_ADDRESSED;
 input (u8,u8) I2C_REQUEST_DONE;
 
-output (u8 n_bytes) I2C_REQUEST_RECEIVE do
-    outer.twi_receive_buffer = [];
-    outer.requestmode = 1;
+output (none) I2C_REQUEST_SEND do
+    outer.requestmode = 0;
     {
-        RXBuffIndex = 0;
-        RXBuffLen = @n_bytes;
-        TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE); // send ack
+        TXBuffIndex = 0;
+        TXBuffLen = @($outer.twi_transmit_buffer);
+        if(TXBuffLen){
+            s(@(outer.twi_transmit_buffer[{TXBuffIndex}]));
+            TWDR = @(outer.twi_transmit_buffer[{TXBuffIndex++}]);
+            s(TWDR);
+            TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE); // send ack
+        }
+        else
+            TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE); // send nack
     }
 end
 spawn async/isr [_TWI_vect] do
@@ -59,34 +65,31 @@ spawn async/isr [_TWI_vect] do
     {
         print_stat(TW_STATUS);
         switch(TW_STATUS){
-            case TW_SR_SLA_ACK:
-            case TW_SR_GCALL_ACK:
-            case TW_SR_ARB_LOST_SLA_ACK: 
-            case TW_SR_ARB_LOST_GCALL_ACK: 
-                @ack =  1;
+
+            case TW_ST_SLA_ACK:
+            case TW_ST_ARB_LOST_SLA_ACK:
+                @ack=1;
+                @outer.requestmode = 0;
                 break;
-            case TW_SR_DATA_ACK:       // data received, returned ack
-            case TW_SR_GCALL_DATA_ACK:
-                if(RXBuffIndex < RXBuffLen){
-                    RXBuffIndex++;
-                    @value = TWDR;
-                    s(TWDR);
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1 << TWEA);
+            case TW_ST_DATA_ACK:
+                if(TXBuffIndex < TXBuffLen){
+                    TWDR = @(outer.twi_transmit_buffer[{TXBuffIndex++}]);
+                    s("data");s(TWDR);
+                    if(TXBuffIndex!=TXBuffLen){
+                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)| (1 << TWEA);
+                    }
+                    else{
+                        s("d2");
+                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+                    }
                 }else{
-                    @done = 1;
                     TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
                 }
                 break;
-            case TW_SR_STOP:
-                RXBuffIndex = 0;
-                RXBuffLen = 0;
+            case TW_ST_DATA_NACK:
+            case TW_ST_LAST_DATA:
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1 << TWEA);
                 @done=1;
-                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)| (1 << TWEA);
-                break;
-            case TW_SR_DATA_NACK:
-            case TW_SR_GCALL_DATA_NACK:
-                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA);
-                @done = 1;
                 break;
             default:
                 TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)| (1 << TWEA);
@@ -94,14 +97,11 @@ spawn async/isr [_TWI_vect] do
     }
     
     if ack then
-        emit I2C_REQUEST_ADDRESSED(1);
-        {TWCR = (1<<TWEN) | (1 << TWEA);} // disable interrupt from getting triggered
-    end
-    if value != -1 then
-        outer.twi_receive_buffer = outer.twi_receive_buffer .. [value];
+        emit I2C_REQUEST_ADDRESSED(outer.requestmode);
+        {TWCR =  (1<<TWEN) | (1 << TWEA);} // disable interrupt from getting triggered
     end
     if done then
-        emit I2C_REQUEST_DONE({RXBuffLen},outer.errorcode);
+        emit I2C_REQUEST_DONE({TXBuffLen},outer.errorcode);
         outer.requestmode = -1;
     end
 end
@@ -118,15 +118,9 @@ end
 
 loop do
     await I2C_REQUEST_ADDRESSED;
-    emit I2C_REQUEST_RECEIVE(4);
+    twi_transmit_buffer = [1,2];
+    emit I2C_REQUEST_SEND;
     await I2C_REQUEST_DONE;
-    var u8 i;
-    loop i in [1-> $twi_receive_buffer as u8] do
-        {s(@twi_receive_buffer[i-1]);}
-    end
     {Serial.println("bye");}
 end
 await FOREVER;
-
-
-//_ceu_arduino_assert(0,3);

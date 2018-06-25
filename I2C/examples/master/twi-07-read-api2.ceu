@@ -24,6 +24,7 @@ native
 ;
 native/pre do
     ##include <compat/twi.h>
+    #include "../print_status.h"
     int SLA;
     int RXBuffIndex=0;
     int RXBuffLen=0;
@@ -58,26 +59,24 @@ spawn async/isr [_TWI_vect] do
   var bool done = false;
   var int value = -1;
   { 
+      print_stat(TW_STATUS);
     switch(TW_STATUS){
     
         case TW_START:
         case TW_REP_START:
             @(outer.errorcode) = 0;
             if(@(outer.requestmode)!=-1){
-                Serial.println("1");
                 TWDR = (SLA << 1) | @(outer.requestmode); // SLA + Read/Write (Write in this case)
                 TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA); // Continue Transfer
             }
             else{
                 @done=1;
-                Serial.println("2");
                 TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE); // send stop
             }
             break;
       
         case TW_MR_SLA_ACK:
             if(RXBuffIndex<RXBuffLen){
-                Serial.println("3");
                 TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA);
             }
             else{
@@ -87,16 +86,22 @@ spawn async/isr [_TWI_vect] do
             break;
         case TW_MR_DATA_ACK:
             if(RXBuffIndex<RXBuffLen){
-                @(value) = TWDR;
-                RXBuffIndex++;
-                Serial.println("5");
-                if(RXBuffIndex!=RXBuffLen)
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA);
-                else
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+                if(TWDR==255){
+                    @done=1;
+                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
+                }
+                else{
+                    @(value) = TWDR;
+                    RXBuffIndex++;
+                    if(RXBuffIndex!=RXBuffLen)
+                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA);
+                    else{
+                        @done=1;
+                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
+                    }
+                }
             }
             else{
-                Serial.println("6");
                 @done=1;
                 TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
             }
@@ -104,14 +109,11 @@ spawn async/isr [_TWI_vect] do
         case TW_MR_DATA_NACK:
         case TW_MR_SLA_NACK:
 
-            Serial.println("7");
             @outer.errorcode=2;// in case of slave not connected or receiving NACK from slave or requesting more data from the slave than the amount sent
             @done=1;
             TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
             break;
         default:
-
-            Serial.println("8");
             @outer.errorcode=3;
             @done=1;
             TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);//default case sends stop condition
@@ -119,11 +121,11 @@ spawn async/isr [_TWI_vect] do
   }
 
   if value!=-1 then
-    {Serial.println(@(value));}
-    //outer.twi_receive_buffer = outer.twi_receive_buffer .. [value as byte];
+    {s(@value);}
+    outer.twi_receive_buffer = outer.twi_receive_buffer .. [value as byte];
   end
   if done then
-    emit I2C_REQUEST_DONE({RXBuffLen},outer.errorcode);
+    emit I2C_REQUEST_DONE(($outer.twi_receive_buffer) as u8,outer.errorcode);
     {
         RXBuffIndex=0;
         RXBuffLen=0;
@@ -137,6 +139,10 @@ end
 loop do
     emit I2C_REQUEST_RECEIVE(4,4);
     await I2C_REQUEST_DONE;
-    {Serial.println("h");}
+    await 5s;
+    var u8 i;
+    loop i in [1->($twi_receive_buffer) as u8] do
+        _Serial.println(twi_receive_buffer[i-1]);
+    end
+    _Serial.println("bye");
 end
-await FOREVER;
