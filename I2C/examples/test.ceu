@@ -13,26 +13,19 @@ spawn async/isr [_TWI_vect] do
   emit ABC(1);
 end
 
-{
-  TWBR = ((F_CPU / 100000L) - 16) / 2;
-}
-await 2ms;
+{TWBR = ((F_CPU / 100000L) - 16) / 2;}
 
-par/and do
-  
+par/and do  
   loop do
-    {
-      TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);
-    }
+    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);}
     await ABC;
     await 3ms;
   end
-
 with
-    loop do
-      emit PIN_13(on);
-      await 1s;  
-      emit PIN_13(off);
-      await 1s;
-    end
+  loop do
+    emit PIN_13(on);
+    await 1s;  
+    emit PIN_13(off);
+    await 1s;
+  end
 end
