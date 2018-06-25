@@ -1,4 +1,17 @@
 -------------------------------------------------------------------------------
+`[26-June] -> [2-July]`
+-------------------------------------------------------------------------------
+
+### `[26-June]` What will I do this week?
+
+- Perform more tests and update the description for examples in I2C.
+- Make a working API for RTC in céu.
+
+### `[25-June]` What did I do last week?
+
+- 
+
+-------------------------------------------------------------------------------
 `[18-June] -> [24-June]`
 -------------------------------------------------------------------------------
 
@@ -9,7 +22,13 @@
 
 ### `[25-June]` What did I do last week?
 
-- 
+- Finished the API for I2C
+    - added samples for twi slave
+    - edited read examples to consider unequal request in number of bytes
+    - made the API for slave. 
+    - added I2C_REQUEST_ADDRESSED and I2C_SET_ADDRESS to the API structure.
+    - Tested the API for equal and unequal data transfer requests.
+- Tested existing Real time clock C code on DS3231. Scheduled making the API to next week.
 
 -------------------------------------------------------------------------------
 `[11-June] -> [17-June]`
