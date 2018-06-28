@@ -44,7 +44,7 @@ TWBR | Two Wire Bit Rate Register | Controls the frequency of the clock (SCL)
 
 A read operation is performed similarly.
 
-Refer [this link](https://playground.arduino.cc/Main/WireLibraryDetailedReference#Intro) for more.
+Refer [this link](https://playground.arduino.cc/Main/WireLibraryDetailedReference#Intro) or [this link](https://playground.arduino.cc/Code/ATMELTWI) for more.
 
 ## The Céu API
 
@@ -107,12 +107,12 @@ Code :
     void receiveEvent(int howMany) {
         while (Wire.available()) { // loop through all
             int c = Wire.read(); // receive byte
-            Serial.print(c);         // print the byte as int
+            Serial.println(c);         // print the byte as int
         }
     }
     ```
 
-![Output]()
+![Output](https://raw.githubusercontent.com/mnaveenkumar2009/Interrupt-Based-Drivers-for-ceu-arduino/master/I2C/assets/slave_wire01.png)
 
 - Céu driver
 
@@ -138,7 +138,7 @@ Code :
     _Serial.begin(9600);
     loop do
         await I2C_REQUEST_ADDRESSED;
-        emit I2C_REQUEST_RECEIVE(0,8);
+        emit I2C_REQUEST_RECEIVE(0,5);
         await I2C_REQUEST_DONE;
         var u8 i;
         loop i in [1-> $twi_receive_buffer as u8] do
@@ -149,13 +149,59 @@ Code :
 
 ![Output](https://raw.githubusercontent.com/mnaveenkumar2009/Interrupt-Based-Drivers-for-ceu-arduino/master/I2C/assets/slave_rec01.png)
 
+#### Requesting unequal data
+
+- When the slave requests less than received (we can replace Wire.available() with Wire.available() > 1) then the transfer occurs only once and the receive is never called again
+
+![Output](https://raw.githubusercontent.com/mnaveenkumar2009/Interrupt-Based-Drivers-for-ceu-arduino/master/I2C/assets/slave_wire02.png)
+
+- The Ceu driver can receive less than what is sent and stop after the requested amount is sent by the master.
+
+```
+#include "i2c.ceu"
+emit I2C_SET_ADDRESS(4);
+emit I2C(on);
+_Serial.begin(9600);
+loop do
+    await I2C_REQUEST_ADDRESSED;
+    emit I2C_REQUEST_RECEIVE(0,2); // request only 2 bytes
+    await I2C_REQUEST_DONE;
+    var u8 i;
+    loop i in [1-> $twi_receive_buffer as u8] do
+        _Serial.println(twi_receive_buffer[i-1]);
+    end
+end
+```
+
+![OUTPUT](https://raw.githubusercontent.com/mnaveenkumar2009/Interrupt-Based-Drivers-for-ceu-arduino/master/I2C/assets/slave_rec02.png)
+
+- The Ceu driver can also request more and stop when the received amount is equal to what the master sent
+
+```
+#include "i2c.ceu"
+emit I2C_SET_ADDRESS(4);
+emit I2C(on);
+_Serial.begin(9600);
+loop do
+    await I2C_REQUEST_ADDRESSED;
+    emit I2C_REQUEST_RECEIVE(0,8); // request 8 bytes when the master sends only 5
+    await I2C_REQUEST_DONE;
+    var u8 i;
+    loop i in [1-> $twi_receive_buffer as u8] do
+        _Serial.println(twi_receive_buffer[i-1]);
+    end
+end
+```
+
+![Output](https://raw.githubusercontent.com/mnaveenkumar2009/Interrupt-Based-Drivers-for-ceu-arduino/master/I2C/assets/slave_rec03.png)
+
 
 ### Master receiver and Slave sender
 
 #### Requesting equal data
 
-
-
+#### Requesting unequal data
+- When the master requests less than received (we can replace Wire.available() with Wire.available() > 1) 
 
 ### Concurrency
 
