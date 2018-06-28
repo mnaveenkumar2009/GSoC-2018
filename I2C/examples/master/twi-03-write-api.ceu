@@ -1,24 +1,34 @@
 /*
-The following program illustrates the process of master write of 1 byte data using TWI via a ceu API.
-This example shows 1 byte data transfer
-The program starts by setting the value of the Bit Rate (TWBR).
-It triggers the interrupt by sending the start condition continously after the previous request is completed.
-Since it is only 1 byte, a repeated start isn't sent. To view multiple bytes transfer see example 04.
-The Start condition further changes the TWDR to SLA Write and the TWCR is set to resume the transfer.
-Further, the TWDR is set to the value we are going to send. In this case it is !(input in pin 6) which is passed as an argument to the output
-
-
-Testing:
-    - The ACK from the slave was acheived by a fully connected master slave TWI system and the slave outputs the data received to Serial to see the data.
-    - When a wrong address is mentioned or the slave is disconnected the NACK is assumed and the assert is called accordingly.
-    - Removing the loop and writing await FOREVER at end to stop program from termination causes the program to send the request only once and write only once. This can be observed in the Serial monitor of the slave.
-
-
-Circuit :
-    - SDA,SCL lines of both master and slave pulled up by a resistor to 5V.
-    - 5V and GND of both master and slave connected respectively to operate both at same voltage.
-    - A pushbutton that is grounded on one end and the middle connected to pin 6 of master.
-    - an LED connected to the slave that is set to the data received to observe the output or a Serial monitor to display the data received.
+ * The following program illustrates the process of master write of 1 byte data
+ * using TWI via a ceu API.
+ * This example shows 1 byte data transfer.
+ * The program starts by setting the value of the Bit Rate (TWBR).
+ * It triggers the interrupt by sending the start condition continously after
+ * the previous request is completed.
+ * Since it is only 1 byte, a repeated start isn't sent.
+ * To view multiple bytes transfer see example 04.
+ * The Start condition further changes the TWDR to SLA Write and the TWCR is
+ * set to resume the transfer.
+ * Further, the TWDR is set to the value we are going to send. In this case it
+ * is !(input in pin 6) which is passed as an argument to the output.
+ *
+ * Testing:
+ *  - The ACK from the slave was acheived by a fully connected master slave TWI
+ *    system and the slave outputs the data received to Serial to see the data.
+ *  - When a wrong address is mentioned or the slave is disconnected the NACK
+ *    is assumed and the assert is called accordingly.
+ *  - Removing the loop and writing await FOREVER at end to stop program from
+ *    termination causes the program to send the request only once and write
+ *    only once. This can be observed in the Serial monitor of the slave.
+ *
+ * Circuit :
+ *  - SDA,SCL lines of both master and slave pulled up by a resistor to 5V.
+ *  - 5V and GND of both master and slave connected respectively to operate
+ *    both at same voltage.
+ *  - A pushbutton that is grounded on one end and the middle connected to pin
+ *    6 of master.
+ *  - an LED connected to the slave that is set to the data received to observe
+ *    the output or a Serial monitor to display the data received.
 */
 #include "wclock.ceu"
 native

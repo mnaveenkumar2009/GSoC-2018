@@ -25,6 +25,7 @@ Errorcodes :
 
 var u8 deviceAddress = 0;
 var u8 errorcode = 1;
+var bool twi_ready = true;
 var int requestmode = -1;// 0 for Write and 1 for Read
 #define TXMAXBUFLEN 20 // Transmit buffer length
 var[TXMAXBUFLEN] byte twi_transmit_buffer;// max buffer length = 20
@@ -70,6 +71,7 @@ output (on/off v) I2C do
 end
 
 output (u8 address) I2C_REQUEST_SEND do
+    {while(!@outer.twi_ready);}
     if address > 0 then
         // set requestmode as TW_WRITE (0) and send start signal
         outer.requestmode=0;// write mode
@@ -95,6 +97,7 @@ output (u8 address) I2C_REQUEST_SEND do
 end
 
 output (u8 address, u8 n_byte) I2C_REQUEST_RECEIVE do
+    {while(!@outer.twi_ready);}
     if address > 0 then
         // set requestmode as TW_READ (1) and send start signal
         outer.requestmode=1;// read mode
@@ -126,6 +129,7 @@ spawn async/isr [_TWI_vect] do
         switch(TW_STATUS){
             case TW_START:
             case TW_REP_START:
+                @outer.twi_ready = 0;
                 @(outer.errorcode) = 0;
                 if(@(outer.requestmode)!=-1){
                     TWDR = (SLA << 1) | @(outer.requestmode); // SLA + Read/Write (Write in this case)
@@ -175,8 +179,7 @@ spawn async/isr [_TWI_vect] do
                         if(RXBuffIndex!=RXBuffLen)
                             TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA);
                         else{
-                            @done=1;
-                            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
+                            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
                         }
                     }
                 }
@@ -197,6 +200,7 @@ spawn async/isr [_TWI_vect] do
             case TW_ST_ARB_LOST_SLA_ACK:
                 @ack=1;
                 @outer.requestmode = 0;
+                @outer.twi_ready = 0;
                 break;
             case TW_ST_DATA_ACK:
                 if(TXBuffIndex < TXBuffLen){
@@ -222,6 +226,8 @@ spawn async/isr [_TWI_vect] do
             case TW_SR_ARB_LOST_SLA_ACK: 
             case TW_SR_ARB_LOST_GCALL_ACK: 
                 @ack =  1;
+                @outer.requestmode = 1;
+                @outer.twi_ready = 0;
                 break;
             case TW_SR_DATA_ACK:       // data received, returned ack
             case TW_SR_GCALL_DATA_ACK:
@@ -262,11 +268,16 @@ spawn async/isr [_TWI_vect] do
     end
     
     if done then
+        outer.twi_ready = true;
         if outer.requestmode != -1 then
-            if outer.requestmode == 1 then
-                emit I2C_REQUEST_DONE({TXBuffLen},outer.errorcode);
+            if outer.requestmode == 0 then
+                emit I2C_REQUEST_DONE({TXBuffIndex},outer.errorcode);
             else
-                emit I2C_REQUEST_DONE({RXBuffLen},outer.errorcode);
+                emit I2C_REQUEST_DONE(($outer.twi_receive_buffer) as u8,outer.errorcode);
+                {
+                    RXBuffIndex=0;
+                    RXBuffLen=0;
+                }
             end
         else
             emit I2C_REQUEST_DONE(0,outer.errorcode);
