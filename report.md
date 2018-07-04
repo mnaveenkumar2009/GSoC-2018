@@ -1,15 +1,29 @@
 -------------------------------------------------------------------------------
-`[26-June] -> [2-July]`
+`[2-July] -> [9-July]`
 -------------------------------------------------------------------------------
 
-### `[26-June]` What will I do this week?
+### `[2-July]` What will I do this week?
+
+- Finish the API for RTC.
+- Start with a new driver.
+
+### `[10-July]` What did I do last week?
+
+-
+
+-------------------------------------------------------------------------------
+`[25-June] -> [1-July]`
+-------------------------------------------------------------------------------
+
+### `[25-June]` What will I do this week?
 
 - Perform more tests and update the description for examples in I2C.
 - Make a working API for RTC in céu.
 
-### `[25-June]` What did I do last week?
+### `[2-July]` What did I do last week?
 
-- 
+- Worked on API for Real Time Clock. Rescheduled the rest of the API to next week.
+- Addressed issues in I2C and fixed them.
 
 -------------------------------------------------------------------------------
 `[18-June] -> [24-June]`
