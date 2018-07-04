@@ -33,7 +33,7 @@ native
 
 native/pre do
     ##include <compat/twi.h>
-    int SLA=8;
+    int SLA=4;
     int count=1;
 end
 
@@ -56,9 +56,13 @@ spawn async/isr [_TWI_vect] do
         ceu_arduino_assert(0,3);
         break;
         
-    default:
+    case TW_MT_DATA_ACK:
         // default case sends stop condition
         TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
+        break;
+
+    default:
+        ceu_arduino_assert(0,1);    // should never reach this state
   }
 }
 end

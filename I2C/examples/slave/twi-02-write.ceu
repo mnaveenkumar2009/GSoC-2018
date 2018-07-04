@@ -74,12 +74,10 @@ spawn async/isr [_TWI_vect] do
             case TW_ST_DATA_ACK:
                 if(TXBuffIndex < TXBuffLen){
                     TWDR = @(outer.twi_transmit_buffer[{TXBuffIndex++}]);
-                    s("data");s(TWDR);
                     if(TXBuffIndex!=TXBuffLen){
                         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)| (1 << TWEA);
                     }
                     else{
-                        s("d2");
                         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
                     }
                 }else{
@@ -101,7 +99,7 @@ spawn async/isr [_TWI_vect] do
         {TWCR =  (1<<TWEN) | (1 << TWEA);} // disable interrupt from getting triggered
     end
     if done then
-        emit I2C_REQUEST_DONE({TXBuffLen},outer.errorcode);
+        emit I2C_REQUEST_DONE({TXBuffIndex},outer.errorcode);
         outer.requestmode = -1;
     end
 end
@@ -109,7 +107,7 @@ end
 
 {
     TWBR = ((F_CPU / 100000L) - 16) / 2;// Bit rate formula
-    TWAR = 4 << 1;
+    TWAR = 8 << 1;
   	Serial.begin(9600);
     digitalWrite(SDA,1);
     digitalWrite(SCL,1);
@@ -123,4 +121,3 @@ loop do
     await I2C_REQUEST_DONE;
     {Serial.println("bye");}
 end
-await FOREVER;
