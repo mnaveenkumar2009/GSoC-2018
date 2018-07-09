@@ -1,5 +1,20 @@
 -------------------------------------------------------------------------------
-`[2-July] -> [9-July]`
+`[9-July] -> [15-July]`
+-------------------------------------------------------------------------------
+
+### `[9-July]` What will I do this week?
+
+- Update the RTC driver to support square wave output and add more examples.
+- Document and add comments for RTC.
+- Update the README and REPORT of I2C to the modified API.
+- Start with OLED driver and it's ceu API.
+
+### `[16-July]` What did I do last week?
+
+- 
+
+-------------------------------------------------------------------------------
+`[2-July] -> [8-July]`
 -------------------------------------------------------------------------------
 
 ### `[2-July]` What will I do this week?
@@ -7,9 +22,12 @@
 - Finish the API for RTC.
 - Start with a new driver.
 
-### `[10-July]` What did I do last week?
+### `[9-July]` What did I do last week?
 
--
+- Added Temperature, timer and Alarm functions to RTC.
+- Fixed issues in I2C, tested and closed them.
+- Yet to document and add comments for better understanding of RTC.
+- Scheduled creating a function 32Hz square wave of RTC to next week.
 
 -------------------------------------------------------------------------------
 `[25-June] -> [1-July]`
