@@ -34,22 +34,20 @@ par/and do
 
     
   loop do
-  {
-    TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);
-  }
- 
+    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);}
+  
 
-  await I2C_REQUEST_DONE;
-    
-  await 300ms;
-  //_ceu_arduino_assert(0, 5);
+    await I2C_REQUEST_DONE;
+      
+    await 300ms;
+    //_ceu_arduino_assert(0, 5);
   end
 
 with
     loop do
-    emit PIN_13(on);
-    await 1s;
-    emit PIN_13(off);
-    await 1s;
+      emit PIN_13(on);
+      await 1s;
+      emit PIN_13(off);
+      await 1s;
     end
 end

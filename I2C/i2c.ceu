@@ -40,12 +40,12 @@ native
     _TWI_vect,
 ;   
 
-output (u8 v) I2C_SET_ADDRESS do
-    outer.deviceAddress = v;
-    {TWAR = @(v) << 1;}
-end
+output (on/off v, u8? address) I2C do    
+    if address then
+        outer.deviceAddress = address;
+        {TWAR = @(address) << 1;}
+    end
 
-output (on/off v) I2C do
     if v then
         {
             TWBR = ((F_CPU / 100000L) - 16) / 2; // Bit rate formula
@@ -71,7 +71,6 @@ output (on/off v) I2C do
 end
 
 output (u8 address) I2C_REQUEST_SEND do
-    {while(!@outer.twi_ready);}
     if address > 0 then
         // set requestmode as TW_WRITE (0) and send start signal
         outer.requestmode=0;// write mode
@@ -97,7 +96,6 @@ output (u8 address) I2C_REQUEST_SEND do
 end
 
 output (u8 address, u8 n_byte) I2C_REQUEST_RECEIVE do
-    {while(!@outer.twi_ready);}
     if address > 0 then
         // set requestmode as TW_READ (1) and send start signal
         outer.requestmode=1;// read mode
