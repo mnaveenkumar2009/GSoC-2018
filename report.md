@@ -1,4 +1,17 @@
 -------------------------------------------------------------------------------
+`[16-July] -> [22-July]`
+-------------------------------------------------------------------------------
+
+### `[16-July]` What will I do this week?
+
+- Update all the drivers to support the latest API of I2C and document it.
+- Make a driver for OLED.
+
+### `[23-July]` What did I do last week?
+
+- 
+
+-------------------------------------------------------------------------------
 `[9-July] -> [15-July]`
 -------------------------------------------------------------------------------
 
@@ -11,7 +24,8 @@
 
 ### `[16-July]` What did I do last week?
 
-- 
+- Updated the I2C API, modified the examples and tested them.
+- Went through existing OLED driver and tried out examples for OLED supporting I2C communication.
 
 -------------------------------------------------------------------------------
 `[2-July] -> [8-July]`

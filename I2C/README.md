@@ -5,7 +5,7 @@ This driver can be used to communicate via I2C between microcontrollers
 
 The I2C driver can be used to communicate between devices via I2C. The API for the ceu driver is as follows:
 
-- Include the driver after clonoing this repository in libraries with #include "i2c.ceu".
+- Include the driver after cloning this repository in libraries with #include "i2c.ceu".
 - emit the I2C to on to begin the Two Wire Interface.
 
 ```

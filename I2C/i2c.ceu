@@ -1,68 +1,76 @@
 /*
-The Below API is an implementation of the TWI or Two Wire Interface.
-
-In TWI the serial data transmission is done in asynchronous mode.
-This protocol uses only two wires for communicating between two or more ICs.
-The two bidirectional open drain lines named SDA (Serial Data) and SCL (Serial Clock) with pull up resistors are used for data transfer between devices.
-
-The current API is as follows:
-
-output on/off I2C;// emit I2C to start or stop
-output (u8) I2C_REQUEST_SEND;// emit request to send 
-output (u8, u8) I2C_REQUEST_RECEIVE;// emit request to receive
-input (u8,u8) I2C_REQUEST_DONE;// await the status of the request
-
-
-Example : samples/    // to be filled later
-
-Errorcodes :
-  No error                 0
-  Interrupt not triggered  1
-  NACK received            2
-  Other Errors             3
+ *  The Below API is an implementation of the TWI or Two Wire Interface.
+ *
+ *  In TWI the serial data transmission is done in asynchronous mode.
+ *  This protocol uses only two wires for communicating between two or more ICs.
+ *  The two bidirectional open drain lines named SDA (Serial Data) and SCL (Serial Clock) with pull up resistors are used for data transfer between devices.
+ *
+ *  The current API is as follows:
+ *
+ *  output (on/off,u8?) I2C; // emit I2C to start or stop
+ *  output (u8) I2C_REQUEST_SEND; // emit request to send 
+ *  output (u8, u8) I2C_REQUEST_RECEIVE; // emit request to receive
+ *  input (u8,u8) I2C_REQUEST_DONE; // await the status of the request
+ *  input int I2C_REQUEST_ADDRESSED; // await the status of the request
+ *
+ *  Example : examples/master/master_receiver01.ceu (To be run with a slave (can use examples/slave/slave_sender01.ceu) )
+ *
+ *  Errorcodes :
+ *  No error                 0
+ *  Interrupt not triggered  1
+ *  NACK received            2
+ *  Other Errors             3
+ *
+ *  Refer README.md for more on how to use the I2C communication.
 */
 #include "../i2c.ceu"
 
-var u8 deviceAddress = 0;
-var u8 errorcode = 1;
-var bool twi_ready = true;
-var int requestmode = -1;// 0 for Write and 1 for Read
-#define TXMAXBUFLEN 20 // Transmit buffer length
-var[TXMAXBUFLEN] byte twi_transmit_buffer;// max buffer length = 20
-var[TXMAXBUFLEN] byte twi_receive_buffer;// max buffer length = 20
+var u8  addr = _;
+var u8 tx_buf_len = _;
+var u8 rx_buf_len = _;
+
+var int mode = {TWI_MODE_NONE};// 0 for Write and 1 for Read
+#define BUF_MAX 20 // Transmit buffer length
+var[BUF_MAX*] byte tx_buf;// max buffer length = 20
+var[BUF_MAX] byte rx_buf;// max buffer length = 20
 
 native/pre do
     ##include <compat/twi.h>
-    #include "i2c.h"
+    #include "print_status.h"   // include for printing the status
+
+    enum {
+        TWI_ERR_NONE = 0,
+        TWI_ERR_NACK = 1,
+        TWI_ERR_ARB  = 2,
+        TWI_ERR_BUS  = 3,
+    };
+
+    enum {
+        TWI_MODE_NONE  = -1,
+        TWI_MODE_WRITE_MASTER =  0,
+        TWI_MODE_READ_MASTER  =  1,
+        TWI_MODE_WRITE_SLAVE =  2,
+        TWI_MODE_READ_SLAVE  =  3,
+    };
 end
 
 native
     _TWI_vect,
 ;   
 
-output (on/off v, u8? address) I2C do    
-    if address then
-        outer.deviceAddress = address;
-        {TWAR = @(address) << 1;}
+output (on/off v, u8? address) I2C do
+    if address? then
+        {TWAR = @(address!) << 1;}
     end
-
     if v then
         {
             TWBR = ((F_CPU / 100000L) - 16) / 2; // Bit rate formula
-            TXBuffIndex = 0;
-            TXBuffLen = 0;
-            RXBuffLen = 0;
-            RXBuffIndex = 0;
             digitalWrite(SDA, 1);
             digitalWrite(SCL, 1);
             TWCR = (1 << TWEA) | (1 << TWEN) | (1<<TWIE) | (1<<TWINT); // send ack
         }
     else
         {
-            TXBuffIndex = 0;
-            TXBuffLen = 0;
-            RXBuffLen = 0;
-            RXBuffIndex = 0;
             TWCR &= ~(_BV(TWEN) | _BV(TWIE) | _BV(TWEA));
             digitalWrite(SDA, 0);
             digitalWrite(SCL, 0);
@@ -71,216 +79,176 @@ output (on/off v, u8? address) I2C do
 end
 
 output (u8 address) I2C_REQUEST_SEND do
-    if address > 0 then
-        // set requestmode as TW_WRITE (0) and send start signal
-        outer.requestmode=0;// write mode
-        {
-            SLA=@address;
-            TXBuffIndex = 0;
-            TXBuffLen = @($outer.twi_transmit_buffer);
-            TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA);// start condition
-        }
-    else
-        outer.requestmode = 0;
-        {
-            TXBuffIndex = 0;
-            TXBuffLen = @($outer.twi_transmit_buffer);
-            if(TXBuffLen){
-                TWDR = @(outer.twi_transmit_buffer[{TXBuffIndex++}]);
-                TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE); // send ack
-            }
-            else
-                TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE); // send nack
-        }
-    end
+    _ceu_assert($outer.tx_buf>0, "Send has 0 data");
+    
+    outer.tx_buf_len = $outer.tx_buf as u8; // set tx_buf_len to buffer length
+
+    outer.mode = {TWI_MODE_WRITE_MASTER};// write mode
+    outer.addr = address; // set the slave address    
+    
+    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA);} // send start condition to begin transfer
 end
 
-output (u8 address, u8 n_byte) I2C_REQUEST_RECEIVE do
-    if address > 0 then
-        // set requestmode as TW_READ (1) and send start signal
-        outer.requestmode=1;// read mode
-        outer.twi_receive_buffer = [];
-        {
-            SLA=@address;
-            RXBuffIndex = 0;
-            RXBuffLen = @n_byte;
-            TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA);// start condition
-        }
-    else
-        outer.twi_receive_buffer = [];
-        outer.requestmode = 1;
-        {
-            RXBuffIndex = 0;
-            RXBuffLen = @n_byte;
-            TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE); // send ack
-        }
-    end
+output none I2C_SEND do
+    _ceu_assert($outer.tx_buf>0, "Send has 0 data");
+
+    outer.tx_buf_len = $outer.tx_buf as u8;
+
+    outer.mode = {TWI_MODE_WRITE_SLAVE};
+    {
+        TWDR = @(outer.tx_buf[0]); // send the first byte of data
+        TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE); // send ack and continue transfer
+    }
+end
+
+output (u8 address, u8 n_bytes) I2C_REQUEST_RECEIVE do
+    outer.rx_buf_len = n_bytes;
+    outer.rx_buf = []; // clear the receive buffer
+    outer.mode = {TWI_MODE_READ_MASTER}; // read mode    
+    outer.addr = address; // set the slave address
+
+    {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA);} // send start condition to begin transfer
+end
+
+output none I2C_RECEIVE do
+    outer.rx_buf = []; // clear the receive buffer
+    outer.mode = {TWI_MODE_READ_SLAVE}; // read mode
+    {TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE);} // send ack
 end
 
 spawn async/isr [_TWI_vect] do
 
-    var bool done = false;
+    var u8 errorcode = 1;
+    var bool done = true;
     var bool ack = false;
     var int value = -1;
+
+    var bool txed = false;
+    var bool rxed = false;
     {
-        print_stat(TW_STATUS);
+        print_stat(TW_STATUS); // uncomment to print the status
         switch(TW_STATUS){
             case TW_START:
             case TW_REP_START:
-                @outer.twi_ready = 0;
-                @(outer.errorcode) = 0;
-                if(@(outer.requestmode)!=-1){
-                    TWDR = (SLA << 1) | @(outer.requestmode); // SLA + Read/Write (Write in this case)
+                @(errorcode) = TWI_ERR_NONE;
+                if(@(outer.mode)!=TWI_MODE_NONE){
+                    TWDR = (@outer.addr << 1) | (@(outer.mode) & 1); // SLA + Read/Write (Write in this case)
                     TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA); // Continue Transfer
-                }
-                else{
-                    TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE); // send stop
-                    @done=1;
+                    @done = 0;
                 }
                 break;
         
             case TW_MT_SLA_ACK:
             case TW_MT_DATA_ACK:
-                if(TXBuffIndex<TXBuffLen){
-                    TWDR = @(outer.twi_transmit_buffer[{TXBuffIndex++}]);
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA);// send ACK
-                }
-                else{
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWSTO) | (1<<TWEA);// send stop
-                    @done=1;
+                if (@($outer.tx_buf) > 0) {
+                    TWDR = @(outer.tx_buf[0]);
+                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+                    @txed = 1;
+                    @done = 0;
                 }
                 break;
             case TW_MT_SLA_NACK:
             case TW_MT_DATA_NACK:
-                @outer.errorcode=2;// in case of slave not connected or receiving NACK from slave or requesting more data from the slave than the amount sent
-                @done=1;
-                TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE) | (1<<TWEA);
+                @errorcode = TWI_ERR_NACK;// in case of slave not connected or receiving NACK from slave or requesting more data from the slave than the amount sent
                 break;
             case TW_MR_SLA_ACK:
-                if(RXBuffIndex<RXBuffLen){
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA);
-                }
-                else{
-                    @done=1;
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);// send NACK
-                }
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA); // send ack
+                @done=0;
                 break;
             case TW_MR_DATA_ACK:
-                if(RXBuffIndex<RXBuffLen){
-                    if(TWDR==255){
-                        @done=1;
-                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
-                    }
-                    else{
-                        @(value) = TWDR;
-                        RXBuffIndex++;
-                        if(RXBuffIndex!=RXBuffLen)
-                            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)|(1<<TWEA);
-                        else{
-                            TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
-                        }
-                    }
-                }
-                else{
-                    @done=1;
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
+                if(@outer.rx_buf_len--){
+                    @(value) = TWDR;
+                    @done = 0;
+                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA); // send ack
                 }
                 break;
             case TW_MR_DATA_NACK:
             case TW_MR_SLA_NACK:
-
-                @outer.errorcode=2;// in case of slave not connected or receiving NACK from slave or requesting more data from the slave than the amount sent
-                @done=1;
-                TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE);
+                @errorcode = TWI_ERR_NACK; // in case of slave not connected or receiving NACK from slave
                 break;
 
             case TW_ST_SLA_ACK:
             case TW_ST_ARB_LOST_SLA_ACK:
-                @ack=1;
-                @outer.requestmode = 0;
-                @outer.twi_ready = 0;
+                @ack = 1;
+                @outer.mode = TWI_MODE_WRITE_SLAVE;
+                @done = 0;
                 break;
             case TW_ST_DATA_ACK:
-                if(TXBuffIndex < TXBuffLen){
-                    TWDR = @(outer.twi_transmit_buffer[{TXBuffIndex++}]);
-                    if(TXBuffIndex!=TXBuffLen){
-                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)| (1 << TWEA);
-                    }
-                    else{
-                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
-                    }
-                }else{
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+                if (@($outer.tx_buf) > 0) {
+                    TWDR = @(outer.tx_buf[0]);
+                    if (@($outer.tx_buf) != 1)
+                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA);
+                    else
+                        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);// last data sent
+                    @txed = 1;
+                    @done = 0;
+                }
+                else{
+                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE); // send NACK
+                    @done = 0;
                 }
                 break;
             case TW_ST_DATA_NACK:
             case TW_ST_LAST_DATA:
-                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1 << TWEA);
-                @done=1;
                 break;
 
             case TW_SR_SLA_ACK:
             case TW_SR_GCALL_ACK:
             case TW_SR_ARB_LOST_SLA_ACK: 
-            case TW_SR_ARB_LOST_GCALL_ACK: 
+            case TW_SR_ARB_LOST_GCALL_ACK:
                 @ack =  1;
-                @outer.requestmode = 1;
-                @outer.twi_ready = 0;
+                @outer.mode = TWI_MODE_READ_SLAVE;
+                @done = 0;
                 break;
             case TW_SR_DATA_ACK:       // data received, returned ack
             case TW_SR_GCALL_DATA_ACK:
-                if(RXBuffIndex < RXBuffLen){
-                    RXBuffIndex++;
-                    @value = TWDR;
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1 << TWEA);
-                }else{
-                    @done = 1;
-                    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
-                }
+                @value = TWDR;
+                @done=0;
+                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1 << TWEA);
                 break;
             case TW_SR_STOP:
-                RXBuffIndex = 0;
-                RXBuffLen = 0;
-                @done=1;
-                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE)| (1 << TWEA);
                 break;
             case TW_SR_DATA_NACK:
             case TW_SR_GCALL_DATA_NACK:
-                TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA);
-                @done = 1;
+                @errorcode = TWI_ERR_NACK;
                 break;
             default:
-                @outer.errorcode=3;
-                @done=1;                
-                TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE) | (1<<TWEA);//default case sends stop condition
+                @errorcode = TWI_ERR_BUS;
         }
     }
     
+    if txed then
+        $outer.tx_buf = $outer.tx_buf - 1;
+    end
+
     if ack then
-        emit I2C_REQUEST_ADDRESSED(outer.requestmode);
+        emit I2C_REQUEST_ADDRESSED(outer.mode);
         {TWCR =  (1<<TWEN) | (1 << TWEA);} // disable interrupt from getting triggered
     end
 
     if value!=-1 then
-        outer.twi_receive_buffer = outer.twi_receive_buffer .. [value as byte];// Push the received value to the buffer
+        outer.rx_buf = outer.rx_buf .. [value as byte];// Push the received value to the buffer
     end
     
     if done then
-        outer.twi_ready = true;
-        if outer.requestmode != -1 then
-            if outer.requestmode == 0 then
-                emit I2C_REQUEST_DONE({TXBuffIndex},outer.errorcode);
+        if outer.mode != {TWI_MODE_NONE} then
+            if outer.mode == {TWI_MODE_WRITE_SLAVE} or outer.mode == {TWI_MODE_WRITE_MASTER} then
+                emit I2C_REQUEST_DONE((outer.tx_buf_len - ($outer.tx_buf as u8)),errorcode);
+                outer.tx_buf = [];
             else
-                emit I2C_REQUEST_DONE(($outer.twi_receive_buffer) as u8,outer.errorcode);
-                {
-                    RXBuffIndex=0;
-                    RXBuffLen=0;
-                }
+                emit I2C_REQUEST_DONE(($outer.rx_buf) as u8,errorcode);
             end
         else
-            emit I2C_REQUEST_DONE(0,outer.errorcode);
+            emit I2C_REQUEST_DONE(0,errorcode);
         end
-        outer.twi_transmit_buffer = [];
+        
+        if outer.mode & 2 == 0 then // if master
+            {TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO) | (1<<TWIE) | (1<<TWEA);} // send stop
+        else
+            {TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA);} // send ACK and wait for master to address slave
+        end
+
+        outer.mode = {TWI_MODE_NONE};
     end
 
 end
