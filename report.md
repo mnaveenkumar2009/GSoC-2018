@@ -1,4 +1,17 @@
 -------------------------------------------------------------------------------
+`[23-July] -> [29-July]`
+-------------------------------------------------------------------------------
+
+### `[23-July]` What will I do this week?
+
+- Finish the OLED driver.
+- Document all the drivers in a README file for each.
+
+### `[30-July]` What did I do last week?
+
+- 
+
+-------------------------------------------------------------------------------
 `[16-July] -> [22-July]`
 -------------------------------------------------------------------------------
 
@@ -9,7 +22,10 @@
 
 ### `[23-July]` What did I do last week?
 
-- 
+- Updated the I2C API.
+- Updated README of I2C and added comparisons with Arduino API.
+- Made a driver for OLED and tested it.
+- Scheduled graphics and reducing memory of source code to next week.
 
 -------------------------------------------------------------------------------
 `[9-July] -> [15-July]`
