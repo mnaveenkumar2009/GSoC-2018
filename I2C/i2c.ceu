@@ -7,11 +7,6 @@
  *
  *  The current API is as follows:
  *
- *  output (on/off,u8?) I2C; // emit I2C to start or stop
- *  output (u8) I2C_REQUEST_SEND; // emit request to send 
- *  output (u8, u8) I2C_REQUEST_RECEIVE; // emit request to receive
- *  input (u8,u8) I2C_REQUEST_DONE; // await the status of the request
- *  input int I2C_REQUEST_ADDRESSED; // await the status of the request
  *
  *  Example : examples/master/master_receiver01.ceu (To be run with a slave (can use examples/slave/slave_sender01.ceu) )
  *
@@ -21,7 +16,7 @@
  *  NACK received            2
  *  Other Errors             3
  *
- *  Refer README.md for more on how to use the I2C communication.
+ *  Refer README.md for more on how to use the I2C communication and the comparison with the Arduino API.
 */
 #include "../i2c.ceu"
 
@@ -30,13 +25,10 @@ var u8 tx_buf_len = _;
 var u8 rx_buf_len = _;
 
 var int mode = {TWI_MODE_NONE};// 0 for Write and 1 for Read
-#define BUF_MAX 20 // Transmit buffer length
-var[BUF_MAX*] byte tx_buf;// max buffer length = 20
-var[BUF_MAX] byte rx_buf;// max buffer length = 20
 
 native/pre do
     ##include <compat/twi.h>
-    #include "print_status.h"   // include for printing the status
+    //#include "print_status.h"   // include for printing the status
 
     enum {
         TWI_ERR_NONE = 0,
@@ -78,9 +70,7 @@ output (on/off v, u8? address) I2C do
     end
 end
 
-output (u8 address) I2C_REQUEST_SEND do
-    _ceu_assert($outer.tx_buf>0, "Send has 0 data");
-    
+output (u8 address) I2C_MASTER_SEND do    
     outer.tx_buf_len = $outer.tx_buf as u8; // set tx_buf_len to buffer length
 
     outer.mode = {TWI_MODE_WRITE_MASTER};// write mode
@@ -89,9 +79,7 @@ output (u8 address) I2C_REQUEST_SEND do
     {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA);} // send start condition to begin transfer
 end
 
-output none I2C_SEND do
-    _ceu_assert($outer.tx_buf>0, "Send has 0 data");
-
+output none I2C_SLAVE_SEND do
     outer.tx_buf_len = $outer.tx_buf as u8;
 
     outer.mode = {TWI_MODE_WRITE_SLAVE};
@@ -99,34 +87,30 @@ output none I2C_SEND do
         TWDR = @(outer.tx_buf[0]); // send the first byte of data
         TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE); // send ack and continue transfer
     }
+    $outer.tx_buf = $outer.tx_buf - 1;
 end
 
-output (u8 address, u8 n_bytes) I2C_REQUEST_RECEIVE do
+output (u8 address, u8 n_bytes) I2C_MASTER_RECEIVE do
     outer.rx_buf_len = n_bytes;
-    outer.rx_buf = []; // clear the receive buffer
+    // done in the ISR : outer.rx_buf = []; // clear the receive buffer
     outer.mode = {TWI_MODE_READ_MASTER}; // read mode    
     outer.addr = address; // set the slave address
 
     {TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA);} // send start condition to begin transfer
 end
 
-output none I2C_RECEIVE do
-    outer.rx_buf = []; // clear the receive buffer
-    outer.mode = {TWI_MODE_READ_SLAVE}; // read mode
-    {TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE);} // send ack
-end
 
 spawn async/isr [_TWI_vect] do
 
     var u8 errorcode = 1;
     var bool done = true;
-    var bool ack = false;
+    var bool slave_send_ack = false;
     var int value = -1;
 
     var bool txed = false;
     var bool rxed = false;
     {
-        print_stat(TW_STATUS); // uncomment to print the status
+        //print_stat(TW_STATUS); // uncomment to print the status
         switch(TW_STATUS){
             case TW_START:
             case TW_REP_START:
@@ -153,7 +137,8 @@ spawn async/isr [_TWI_vect] do
                 break;
             case TW_MR_SLA_ACK:
                 TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE) | (1<<TWEA); // send ack
-                @done=0;
+                @rxed = 1;
+                @done = 0;
                 break;
             case TW_MR_DATA_ACK:
                 if(@outer.rx_buf_len--){
@@ -169,11 +154,12 @@ spawn async/isr [_TWI_vect] do
 
             case TW_ST_SLA_ACK:
             case TW_ST_ARB_LOST_SLA_ACK:
-                @ack = 1;
+                @slave_send_ack = 1;
                 @outer.mode = TWI_MODE_WRITE_SLAVE;
                 @done = 0;
                 break;
             case TW_ST_DATA_ACK:
+                ceu_assert(@($outer.tx_buf) > 0,"insuffucient data");
                 if (@($outer.tx_buf) > 0) {
                     TWDR = @(outer.tx_buf[0]);
                     if (@($outer.tx_buf) != 1)
@@ -196,9 +182,10 @@ spawn async/isr [_TWI_vect] do
             case TW_SR_GCALL_ACK:
             case TW_SR_ARB_LOST_SLA_ACK: 
             case TW_SR_ARB_LOST_GCALL_ACK:
-                @ack =  1;
+                @rxed =  1;
                 @outer.mode = TWI_MODE_READ_SLAVE;
                 @done = 0;
+                TWCR = (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE);
                 break;
             case TW_SR_DATA_ACK:       // data received, returned ack
             case TW_SR_GCALL_DATA_ACK:
@@ -221,8 +208,12 @@ spawn async/isr [_TWI_vect] do
         $outer.tx_buf = $outer.tx_buf - 1;
     end
 
-    if ack then
-        emit I2C_REQUEST_ADDRESSED(outer.mode);
+    if rxed then
+        outer.rx_buf = [];
+    end
+
+    if slave_send_ack then
+        emit I2C_SLAVE_SEND_ACKED();
         {TWCR =  (1<<TWEN) | (1 << TWEA);} // disable interrupt from getting triggered
     end
 
@@ -233,13 +224,17 @@ spawn async/isr [_TWI_vect] do
     if done then
         if outer.mode != {TWI_MODE_NONE} then
             if outer.mode == {TWI_MODE_WRITE_SLAVE} or outer.mode == {TWI_MODE_WRITE_MASTER} then
-                emit I2C_REQUEST_DONE((outer.tx_buf_len - ($outer.tx_buf as u8)),errorcode);
+                emit I2C_DONE((outer.tx_buf_len - ($outer.tx_buf as u8)),errorcode);
                 outer.tx_buf = [];
             else
-                emit I2C_REQUEST_DONE(($outer.rx_buf) as u8,errorcode);
+                if outer.mode == {TWI_MODE_READ_MASTER} then
+                    emit I2C_DONE(($outer.rx_buf) as u8,errorcode);
+                else
+                    emit I2C_SLAVE_RECEIVE(($outer.rx_buf) as u8,errorcode);
+                end
             end
         else
-            emit I2C_REQUEST_DONE(0,errorcode);
+            emit I2C_DONE(0,errorcode);
         end
         
         if outer.mode & 2 == 0 then // if master
