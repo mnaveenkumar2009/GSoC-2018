@@ -1,4 +1,16 @@
 -------------------------------------------------------------------------------
+`[30-July] -> [5-Aug]`
+-------------------------------------------------------------------------------
+
+### `[30-July]` What will I do this week?
+
+- Finish all the drivers with documentation and test them.
+
+### `[6-Aug]` What did I do last week?
+
+- 
+
+-------------------------------------------------------------------------------
 `[23-July] -> [29-July]`
 -------------------------------------------------------------------------------
 
@@ -9,7 +21,9 @@
 
 ### `[30-July]` What did I do last week?
 
-- 
+- Updated the OLED driver.
+- Updated the RTC driver to the new I2C API.
+- Scheduled the Documentation and the rest of OLED driver to next week.
 
 -------------------------------------------------------------------------------
 `[16-July] -> [22-July]`
