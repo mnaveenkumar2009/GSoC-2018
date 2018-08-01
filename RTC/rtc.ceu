@@ -1,8 +1,14 @@
 /*
-
-
-
-*/
+ * General Description
+ * The  DS3231  is  a  low-cost,  extremely  accurate  I2C  real-time clock (RTC) with
+ * an integrated temperature-compensated  crystal  oscillator  (TCXO)  and  crystal.
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
 #include "../rtc.ceu"
 #include "i2c.ceu"
 
@@ -13,20 +19,20 @@ end
 
 code/await Rtc_write_register8 (var u8 reg, var u8 value) -> none
 do
-    outer.twi_transmit_buffer = [reg,value];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [reg,value];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
 end
 
 code/await Rtc_read_register8 (var u8 reg) -> u8
 do
-    outer.twi_transmit_buffer = [reg];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
-    emit I2C_REQUEST_RECEIVE(DS3231_ADDRESS, 1);
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [reg];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
+    emit I2C_MASTER_RECEIVE(DS3231_ADDRESS, 1);
+    await I2C_DONE;
 
-    escape outer.twi_receive_buffer[0] as u8;
+    escape outer.rx_buf[0] as u8;
 end
 
 code/await Rtc (var on/off v) -> none
@@ -45,34 +51,34 @@ end
 
 code/await Rtc_get_time (var&[] u16 values) -> none
 do
-    outer.twi_transmit_buffer = [{DS3231_REG_TIME}];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [{DS3231_REG_TIME}];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
 
-    emit I2C_REQUEST_RECEIVE({DS3231_ADDRESS}, 7);
-    await I2C_REQUEST_DONE;
+    emit I2C_MASTER_RECEIVE({DS3231_ADDRESS}, 7);
+    await I2C_DONE;
 
     var u8 i;
     loop i in [0->6] do
-        values = values .. [{bcd2dec(@outer.twi_receive_buffer[i])}];
+        values = values .. [{bcd2dec(@outer.rx_buf[i])}];
     end
     values[6]=values[6]+2000;    
 end
 
 code/await Rtc_set_time (var u16 year,var u8 month, var u8 day, var u8 hour, var u8 minute, var u8 second) -> none do
-    outer.twi_transmit_buffer = [{DS3231_REG_TIME},{dec2bcd(@second)},{dec2bcd(@minute)},{dec2bcd(@hour)},{dec2bcd(dow(@year, @month, @day))},{dec2bcd(@day)},{dec2bcd(@month)},{dec2bcd(@year-2000)},{DS3231_REG_TIME}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{DS3231_REG_TIME}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{dec2bcd(@second)}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{dec2bcd(@minute)}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{dec2bcd(@hour)}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{dec2bcd(dow(@year, @month, @day))}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{dec2bcd(@day)}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{dec2bcd(@month)}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{dec2bcd(@year-2000)}];
-    //outer.twi_transmit_buffer = outer.twi_transmit_buffer = .. [{DS3231_REG_TIME}];
+    outer.tx_buf = [{DS3231_REG_TIME},{dec2bcd(@second)},{dec2bcd(@minute)},{dec2bcd(@hour)},{dec2bcd(dow(@year, @month, @day))},{dec2bcd(@day)},{dec2bcd(@month)},{dec2bcd(@year-2000)},{DS3231_REG_TIME}];
+    //outer.tx_buf = outer.tx_buf = .. [{DS3231_REG_TIME}];
+    //outer.tx_buf = outer.tx_buf = .. [{dec2bcd(@second)}];
+    //outer.tx_buf = outer.tx_buf = .. [{dec2bcd(@minute)}];
+    //outer.tx_buf = outer.tx_buf = .. [{dec2bcd(@hour)}];
+    //outer.tx_buf = outer.tx_buf = .. [{dec2bcd(dow(@year, @month, @day))}];
+    //outer.tx_buf = outer.tx_buf = .. [{dec2bcd(@day)}];
+    //outer.tx_buf = outer.tx_buf = .. [{dec2bcd(@month)}];
+    //outer.tx_buf = outer.tx_buf = .. [{dec2bcd(@year-2000)}];
+    //outer.tx_buf = outer.tx_buf = .. [{DS3231_REG_TIME}];
     
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
 end
 
 code/await Rtc_force_conversion (none) -> none
@@ -85,29 +91,29 @@ end
 
 code/await Rtc_read_temperature (none) -> r32
 do
-    outer.twi_transmit_buffer = [{DS3231_REG_TEMPERATURE}];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [{DS3231_REG_TEMPERATURE}];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
 
-    emit I2C_REQUEST_RECEIVE({DS3231_ADDRESS}, 2);
-    await I2C_REQUEST_DONE;
-    escape ( (((outer.twi_receive_buffer[0] << 8) | outer.twi_receive_buffer[1]) >> 6) as r32) / 4.0;
+    emit I2C_MASTER_RECEIVE({DS3231_ADDRESS}, 2);
+    await I2C_DONE;
+    escape ( (((outer.rx_buf[0] << 8) | outer.rx_buf[1]) >> 6) as r32) / 4.0;
 end
 // done till here
 
 code/await Rtc_get_alarm1 (var&[] u8 values) -> none
 do
     
-    outer.twi_transmit_buffer = [{DS3231_REG_ALARM_1}];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [{DS3231_REG_ALARM_1}];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
     
-    emit I2C_REQUEST_RECEIVE({DS3231_ADDRESS}, 4);
-    await I2C_REQUEST_DONE;
+    emit I2C_MASTER_RECEIVE({DS3231_ADDRESS}, 4);
+    await I2C_DONE;
 
     var u8 i;
     loop i in [0->3] do
-        values = values .. [{bcd2dec((@outer.twi_receive_buffer[3-i]) & 0b01111111)}];
+        values = values .. [{bcd2dec((@outer.rx_buf[3-i]) & 0b01111111)}];
     end
 
     //day = values[0];
@@ -121,16 +127,16 @@ do
     var[4] u8 values;
     var u16 mode = 0;
 
-    outer.twi_transmit_buffer = [{DS3231_REG_ALARM_1}];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [{DS3231_REG_ALARM_1}];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
 
-    emit I2C_REQUEST_RECEIVE({DS3231_ADDRESS}, 4);
-    await I2C_REQUEST_DONE;
+    emit I2C_MASTER_RECEIVE({DS3231_ADDRESS}, 4);
+    await I2C_DONE;
 
     var u8 i;
     loop i in [0->3] do
-        values = values .. [{bcd2dec(@outer.twi_receive_buffer[3-i]}];
+        values = values .. [{bcd2dec(@outer.rx_buf[3-i]}];
     end
 
     mode = mode | ((values[3] & (1<<6)) >> 6);
@@ -220,14 +226,14 @@ do
     }
 }
 
-    outer.twi_transmit_buffer = [];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[{DS3231_REG_ALARM_1}];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[second];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[minute];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[hour];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[dydw];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [];
+    outer.tx_buf = outer.tx_buf ..[{DS3231_REG_ALARM_1}];
+    outer.tx_buf = outer.tx_buf ..[second];
+    outer.tx_buf = outer.tx_buf ..[minute];
+    outer.tx_buf = outer.tx_buf ..[hour];
+    outer.tx_buf = outer.tx_buf ..[dydw];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
     
     await Rtc_arm_alarm1(armed);
 
@@ -261,16 +267,16 @@ end
 code/await Rtc_get_alarm2(var&[] u8 values) -> none
 do
     
-    outer.twi_transmit_buffer = [{DS3231_REG_ALARM_2}];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [{DS3231_REG_ALARM_2}];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
     
-    emit I2C_REQUEST_RECEIVE({DS3231_ADDRESS}, 3);
-    await I2C_REQUEST_DONE;
+    emit I2C_MASTER_RECEIVE({DS3231_ADDRESS}, 3);
+    await I2C_DONE;
 
     var u8 i;
     loop i in [0->2] do
-        values = values .. [{bcd2dec((@outer.twi_receive_buffer[2-i]) & 0b01111111)}];
+        values = values .. [{bcd2dec((@outer.rx_buf[2-i]) & 0b01111111)}];
     end
 
     //a.day = values[0];
@@ -286,16 +292,16 @@ do
     var[3] u8 values;
     var u8 mode = 0;
 
-    outer.twi_transmit_buffer = [{DS3231_REG_ALARM_2}];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [{DS3231_REG_ALARM_2}];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
     
-    emit I2C_REQUEST_RECEIVE({DS3231_ADDRESS}, 3);
-    await I2C_REQUEST_DONE;
+    emit I2C_MASTER_RECEIVE({DS3231_ADDRESS}, 3);
+    await I2C_DONE;
 
     var u8 i;
     loop i in [0->2] do
-        values = values .. [{bcd2dec(@outer.twi_receive_buffer[2-i])}];
+        values = values .. [{bcd2dec(@outer.rx_buf[2-i])}];
     end
 
     mode = mode | ((values[2] & (1<<6)) >> 5);
@@ -382,13 +388,13 @@ do
     }
 }
 
-    outer.twi_transmit_buffer = [];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[{DS3231_REG_ALARM_2}];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[minute];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[hour];
-    outer.twi_transmit_buffer = outer.twi_transmit_buffer ..[dydw];
-    emit I2C_REQUEST_SEND({DS3231_ADDRESS});
-    await I2C_REQUEST_DONE;
+    outer.tx_buf = [];
+    outer.tx_buf = outer.tx_buf ..[{DS3231_REG_ALARM_2}];
+    outer.tx_buf = outer.tx_buf ..[minute];
+    outer.tx_buf = outer.tx_buf ..[hour];
+    outer.tx_buf = outer.tx_buf ..[dydw];
+    emit I2C_MASTER_SEND({DS3231_ADDRESS});
+    await I2C_DONE;
 
     await Rtc_arm_alarm2(armed);
 

@@ -1,7 +1,6 @@
 #ifndef DS3231_h
 #define DS3231_h
 
-
 #define DS3231_ADDRESS              (0x68)
 
 #define DS3231_REG_TIME             (0x00)
