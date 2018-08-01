@@ -2,11 +2,8 @@
 #include "oled.ceu"
 
 _Serial.begin(9600);
-await Oled(on);
 
-Adafruit_SSD1306 display(4);
-
-       
-display.begin(SSD1306_SWITCHCAPVCC, 0x3C); 
+await Oled(on,{SSD1306_SWITCHCAPVCC},_,false,4);
 await Oled_display();
+
 await FOREVER;

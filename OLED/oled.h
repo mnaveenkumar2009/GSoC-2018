@@ -1,0 +1,143 @@
+
+#if defined(__SAM3X8E__)
+ typedef volatile RwReg PortReg;
+ typedef uint32_t PortMask;
+ #define HAVE_PORTREG
+#elif defined(ARDUINO_ARCH_SAMD)
+// not supported
+#elif defined(ESP8266) || defined(ESP32) || defined(ARDUINO_STM32_FEATHER) || defined(__arc__)
+  typedef volatile uint32_t PortReg;
+  typedef uint32_t PortMask;
+#elif defined(__AVR__)
+  typedef volatile uint8_t PortReg;
+  typedef uint8_t PortMask;
+  #define HAVE_PORTREG
+#else
+  // chances are its 32 bit so assume that
+  typedef volatile uint32_t PortReg;
+  typedef uint32_t PortMask;
+#endif
+
+
+#define BLACK 0
+#define WHITE 1
+#define INVERSE 2
+
+#define SSD1306_I2C_ADDRESS   0x3C  // 011110+SA0+RW - 0x3C or 0x3D
+// Address for 128x32 is 0x3C
+// Address for 128x64 is 0x3D (default) or 0x3C (if SA0 is grounded)
+
+#define SSD1306_128_64
+
+#if defined SSD1306_128_64
+  #define SSD1306_LCDWIDTH                  128
+  #define SSD1306_LCDHEIGHT                 64
+#endif
+#if defined SSD1306_128_32
+  #define SSD1306_LCDWIDTH                  128
+  #define SSD1306_LCDHEIGHT                 32
+#endif
+#if defined SSD1306_96_16
+  #define SSD1306_LCDWIDTH                  96
+  #define SSD1306_LCDHEIGHT                 16
+#endif
+
+#define SSD1306_SETCONTRAST 0x81
+#define SSD1306_DISPLAYALLON_RESUME 0xA4
+#define SSD1306_DISPLAYALLON 0xA5
+#define SSD1306_NORMALDISPLAY 0xA6
+#define SSD1306_INVERTDISPLAY 0xA7
+#define SSD1306_DISPLAYOFF 0xAE
+#define SSD1306_DISPLAYON 0xAF
+
+#define SSD1306_SETDISPLAYOFFSET 0xD3
+#define SSD1306_SETCOMPINS 0xDA
+
+#define SSD1306_SETVCOMDETECT 0xDB
+
+#define SSD1306_SETDISPLAYCLOCKDIV 0xD5
+#define SSD1306_SETPRECHARGE 0xD9
+
+#define SSD1306_SETMULTIPLEX 0xA8
+
+#define SSD1306_SETLOWCOLUMN 0x00
+#define SSD1306_SETHIGHCOLUMN 0x10
+
+#define SSD1306_SETSTARTLINE 0x40
+
+#define SSD1306_MEMORYMODE 0x20
+#define SSD1306_COLUMNADDR 0x21
+#define SSD1306_PAGEADDR   0x22
+
+#define SSD1306_COMSCANINC 0xC0
+#define SSD1306_COMSCANDEC 0xC8
+
+#define SSD1306_SEGREMAP 0xA0
+
+#define SSD1306_CHARGEPUMP 0x8D
+
+#define SSD1306_EXTERNALVCC 0x1
+#define SSD1306_SWITCHCAPVCC 0x2
+
+// Scrolling #defines
+#define SSD1306_ACTIVATE_SCROLL 0x2F
+#define SSD1306_DEACTIVATE_SCROLL 0x2E
+#define SSD1306_SET_VERTICAL_SCROLL_AREA 0xA3
+#define SSD1306_RIGHT_HORIZONTAL_SCROLL 0x26
+#define SSD1306_LEFT_HORIZONTAL_SCROLL 0x27
+#define SSD1306_VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL 0x29
+#define SSD1306_VERTICAL_AND_LEFT_HORIZONTAL_SCROLL 0x2A
+
+static uint8_t buffer[2048] = {
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,224,192,128,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    254,255,255,255,255,254,252,252,248,240,192,128,
+    128,192,192,192,192,192,224,224,224,224,224,224,
+    240,48,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,128,
+    128,192,192,224,224,240,240,248,255,255,255,127,63,
+    3,0,1,3,7,15,15,15,15,7,7,199,247,255,255,255,255,63,
+    7,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,128,192,192,224,224,224,224,240,240,240,242,242,231,
+    231,239,239,223,223,191,191,127,127,253,252,252,248,
+    240,240,128,0,0,0,128,128,192,192,224,224,227,239,
+    255,255,255,255,252,240,224,224,224,192,192,128,0,
+    0,0,0,0,0,0,0,128,128,128,0,0,128,128,128,128,0,128,
+    0,0,128,128,0,0,0,0,0,0,0,0,0,128,128,128,128,0,0,
+    128,128,128,0,128,128,128,224,0,0,128,0,0,128,0,32,
+    224,0,128,128,128,128,128,0,0,128,128,128,0,0,0,0,
+    192,240,252,254,255,255,255,127,31,15,15,7,7,3,3,3,
+    3,3,7,7,7,15,15,31,63,255,255,255,254,252,255,255,
+    255,255,255,252,254,255,255,63,31,15,15,7,7,7,131,
+    131,131,3,3,7,7,15,15,31,127,255,255,255,254,252,240,
+    192,0,7,13,8,13,5,2,15,10,14,7,0,15,12,12,15,15,0,
+    1,1,1,1,1,1,0,2,15,8,8,15,0,0,15,0,0,2,15,8,8,15,0,
+    0,15,8,12,15,0,0,15,0,15,15,0,0,15,0,7,13,8,13,7,0,
+    0,0,255,255,255,255,255,255,128,0,0,0,28,28,28,28,
+    28,28,28,28,28,28,28,28,0,0,0,0,193,227,255,255,255,
+    255,255,255,255,255,227,193,0,0,0,0,0,30,30,30,255,
+    255,255,30,30,30,0,0,0,0,0,128,255,255,255,255,255,
+    255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,7,31,63,127,255,255,254,
+    252,248,240,240,224,224,224,224,224,224,224,224,240,
+    240,248,252,254,255,255,127,63,31,15,3,3,15,31,63,127,
+    255,255,254,252,248,240,240,224,224,224,224,224,224,
+    224,224,240,240,248,252,254,255,255,127,63,31,7,1,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,3,3,3,3,7,7,7,
+    7,7,7,7,7,7,3,3,3,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,3,
+    3,3,7,7,7,7,7,7,7,7,7,3,3,3,3,1,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0};

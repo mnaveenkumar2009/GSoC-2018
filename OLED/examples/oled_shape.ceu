@@ -1,0 +1,134 @@
+#include "wclock.ceu"
+#include "oled.ceu"
+
+_Serial.begin(9600);
+
+await Oled(on,{SSD1306_SWITCHCAPVCC},_,false,4);
+await Oled_display();
+await 2s;
+
+await Oled_clear_display();
+await Oled_draw_pixel(10, 10, true);
+await Oled_display();
+await 2s;
+
+await Oled_clear_display();
+await testdrawline();
+await Oled_display();
+await 2s;
+
+await Oled_clear_display();
+// await testdrawrect();
+await Oled_display();
+await 2s;
+
+  // await Oled_clear_display();
+
+  // // draw multiple rectangles
+  // testfillrect();
+  // await Oled_display();
+  // delay(2000);
+
+  // await Oled_clear_display();
+
+  // draw mulitple circles
+  // testdrawcircle();
+  // await Oled_display();
+  // delay(2000);
+
+
+  // await Oled_clear_display();
+  // draw a white circle, 10 pixel radius
+  // display.fillCircle(display.width()/2, display.height()/2, 10, WHITE);
+  // await Oled_display();
+  // delay(2000);
+  // await Oled_clear_display();
+
+  // testdrawroundrect();
+  // delay(2000);
+  // await Oled_clear_display();
+
+  // testfillroundrect();
+  // delay(2000);
+  // await Oled_clear_display();
+
+  // testdrawtriangle();
+  // delay(2000);
+  // await Oled_clear_display();
+   
+  // testfilltriangle();
+  // delay(2000);
+  // await Oled_clear_display();
+
+  // // draw the first ~12 characters in the font
+  // testdrawchar();
+  // await Oled_display();
+  // delay(2000);
+  // await Oled_clear_display();
+
+  // draw scrolling text
+  //testscrolltext();
+  //dlay(2000);
+  //await Oled_clear_display();
+await FOREVER;
+
+
+code/await testdrawline(none) -> none
+do
+    var u16 i=0;
+
+    loop do
+
+        if i >= 
+
+        end
+    end
+    for (int16_t i=0; i<display.width(); i+=4) {
+      await Oled_draw_line(0, 0, i, display.height()-1, WHITE);
+      await Oled_display();
+    }
+    for (int16_t i=0; i<display.height(); i+=4) {
+      await Oled_draw_line(0, 0, display.width()-1, i, WHITE);
+      await Oled_display();
+    }
+    await 250ms;
+    
+    await Oled_clear_display();
+    for (int16_t i=0; i<display.width(); i+=4) {
+      await Oled_draw_line(0, display.height()-1, i, 0, WHITE);
+      await Oled_display();
+      await 1ms;
+    }
+    for (int16_t i=display.height()-1; i>=0; i-=4) {
+      await Oled_draw_line(0, display.height()-1, display.width()-1, i, WHITE);
+      await Oled_display();
+      await 1ms;
+    }
+    await 250ms;
+    
+    await Oled_clear_display();
+    for (int16_t i=display.width()-1; i>=0; i-=4) {
+      await Oled_draw_line(display.width()-1, display.height()-1, i, 0, WHITE);
+      await Oled_display();
+      await 1ms;
+    }
+    for (int16_t i=display.height()-1; i>=0; i-=4) {
+      await Oled_draw_line(display.width()-1, display.height()-1, 0, i, WHITE);
+      await Oled_display();
+      await 1ms;
+    }
+    await 250ms;
+
+    await Oled_clear_display();
+    for (int16_t i=0; i<display.height(); i+=4) {
+        await Oled_draw_line(display.width()-1, 0, 0, i, WHITE);
+        await Oled_display();
+        await 1ms;
+    }
+    for (int16_t i=0; i<display.width(); i+=4) {
+        await Oled_draw_line(display.width()-1, 0, i, display.height()-1, WHITE); 
+        await Oled_display();
+        await 1ms;
+    }
+    await 250ms;
+end
